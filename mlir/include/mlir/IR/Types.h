@@ -313,7 +313,7 @@ struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value &&
   }
 };
 
-/// We align TypeStorage by 8, so allow LLVM to steal the low bits.
+/// We align TypeStorage by 16, so allow LLVM to steal the low bits.
 template <>
 struct PointerLikeTypeTraits<mlir::Type> {
 public:
@@ -323,7 +323,7 @@ public:
   static inline mlir::Type getFromVoidPointer(void *P) {
     return mlir::Type::getFromOpaquePointer(P);
   }
-  static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 4;
 };
 
 /// Add support for llvm style casts.

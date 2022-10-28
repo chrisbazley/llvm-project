@@ -45,6 +45,7 @@ public:
   FORWARD_SYMBOL_ID_METHOD(getVirtualTableShape)
   FORWARD_SYMBOL_METHOD(isVolatileType)
   FORWARD_SYMBOL_METHOD(getAccess)
+  FORWARD_SYMBOL_METHOD(isOptionalType)
 };
 }
 } // namespace llvm

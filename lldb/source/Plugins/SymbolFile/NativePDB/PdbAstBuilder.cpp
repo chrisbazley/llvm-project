@@ -581,6 +581,9 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
   if ((pointer.getOptions() & PointerOptions::Restrict) != PointerOptions::None)
     pointer_type.addRestrict();
 
+  if ((pointer.getOptions() & PointerOptions::Optional) != PointerOptions::None)
+    pointer_type.addOptional();
+
   return pointer_type;
 }
 

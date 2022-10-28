@@ -31,6 +31,7 @@ public:
   FORWARD_SYMBOL_ID_METHOD_WITH_NAME(getType, getElementType)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(isVolatileType)
+  FORWARD_SYMBOL_METHOD(isOptionalType)
 };
 
 } // namespace pdb

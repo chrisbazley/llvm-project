@@ -337,6 +337,10 @@ public:
     return !!(Attrs & uint32_t(PointerOptions::Restrict));
   }
 
+  bool isOptional() const {
+    return !!(Attrs & uint32_t(PointerOptions::Optional));
+  }
+
   bool isLValueReferenceThisPtr() const {
     return !!(Attrs & uint32_t(PointerOptions::LValueRefThisPointer));
   }

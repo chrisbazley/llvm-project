@@ -42,6 +42,7 @@ void NativeSymbolEnumerator::dump(raw_ostream &OS, int Indent,
   dumpSymbolField(OS, "constType", isConstType(), Indent);
   dumpSymbolField(OS, "unalignedType", isUnalignedType(), Indent);
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
+  dumpSymbolField(OS, "optionalType", isOptionalType(), Indent);
   dumpSymbolField(OS, "value", getValue(), Indent);
 }
 
@@ -70,6 +71,8 @@ PDB_LocType NativeSymbolEnumerator::getLocationType() const {
 bool NativeSymbolEnumerator::isConstType() const { return false; }
 
 bool NativeSymbolEnumerator::isVolatileType() const { return false; }
+
+bool NativeSymbolEnumerator::isOptionalType() const { return false; }
 
 bool NativeSymbolEnumerator::isUnalignedType() const { return false; }
 

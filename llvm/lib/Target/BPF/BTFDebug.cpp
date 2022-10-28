@@ -62,6 +62,9 @@ BTFTypeDerived::BTFTypeDerived(const DIDerivedType *DTy, unsigned Tag,
   case dwarf::DW_TAG_restrict_type:
     Kind = BTF::BTF_KIND_RESTRICT;
     break;
+  case dwarf::DW_TAG_LLVM_optional_type:
+    Kind = BTF::BTF_KIND_OPTIONAL;
+    break;
   default:
     llvm_unreachable("Unknown DIDerivedType Tag");
   }
@@ -91,7 +94,7 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
   const DIType *ResolvedType = DTy->getBaseType();
   if (!ResolvedType) {
     assert((Kind == BTF::BTF_KIND_PTR || Kind == BTF::BTF_KIND_CONST ||
-            Kind == BTF::BTF_KIND_VOLATILE) &&
+            Kind == BTF::BTF_KIND_VOLATILE || Kind == BTF::BTF_KIND_OPTIONAL) &&
            "Invalid null basetype");
     BTFType.Type = 0;
   } else {
@@ -826,7 +829,8 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     }
   } else if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
              Tag == dwarf::DW_TAG_volatile_type ||
-             Tag == dwarf::DW_TAG_restrict_type) {
+             Tag == dwarf::DW_TAG_restrict_type ||
+             Tag == dwarf::DW_TAG_LLVM_optional_type) {
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
     if (Tag == dwarf::DW_TAG_typedef)
@@ -929,7 +933,8 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
     auto Tag = DTy->getTag();
     if (Tag != dwarf::DW_TAG_typedef && Tag != dwarf::DW_TAG_const_type &&
         Tag != dwarf::DW_TAG_volatile_type &&
-        Tag != dwarf::DW_TAG_restrict_type)
+        Tag != dwarf::DW_TAG_restrict_type &&
+        Tag != dwarf::DW_TAG_LLVM_optional_type)
       break;
     Ty = DTy->getBaseType();
   }

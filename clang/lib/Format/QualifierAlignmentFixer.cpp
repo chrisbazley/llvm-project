@@ -410,6 +410,7 @@ tok::TokenKind LeftRightQualifierAlignmentFixer::getTokenFromQualifier(
       .Case("type", tok::kw_typeof)
       .Case("const", tok::kw_const)
       .Case("volatile", tok::kw_volatile)
+      .Case("_Optional", tok::kw__Optional)
       .Case("static", tok::kw_static)
       .Case("inline", tok::kw_inline)
       .Case("constexpr", tok::kw_constexpr)

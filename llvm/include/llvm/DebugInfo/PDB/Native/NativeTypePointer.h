@@ -42,6 +42,7 @@ public:
   SymIndexId getTypeId() const override;
   bool isRestrictedType() const override;
   bool isVolatileType() const override;
+  bool isOptionalType() const override;
   bool isUnalignedType() const override;
 
   bool isSingleInheritance() const override;

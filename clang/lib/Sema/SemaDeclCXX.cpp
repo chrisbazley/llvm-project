@@ -10566,7 +10566,7 @@ QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
     diagnoseIgnoredQualifiers(
         diag::err_constructor_return_type, TypeQuals, SourceLocation(),
         D.getDeclSpec().getConstSpecLoc(), D.getDeclSpec().getVolatileSpecLoc(),
-        D.getDeclSpec().getRestrictSpecLoc(),
+        D.getDeclSpec().getOptionalSpecLoc(), D.getDeclSpec().getRestrictSpecLoc(),
         D.getDeclSpec().getAtomicSpecLoc());
     D.setInvalidType();
   }
@@ -10742,6 +10742,7 @@ QualType Sema::CheckDestructorDeclarator(Declarator &D, QualType R,
                                 SourceLocation(),
                                 D.getDeclSpec().getConstSpecLoc(),
                                 D.getDeclSpec().getVolatileSpecLoc(),
+                                D.getDeclSpec().getOptionalSpecLoc(),
                                 D.getDeclSpec().getRestrictSpecLoc(),
                                 D.getDeclSpec().getAtomicSpecLoc());
       D.setInvalidType();
@@ -17082,6 +17083,8 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
       Diag(DS.getConstSpecLoc(), diag::err_friend_decl_spec) << "const";
     if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
       Diag(DS.getVolatileSpecLoc(), diag::err_friend_decl_spec) << "volatile";
+    if (DS.getTypeQualifiers() & DeclSpec::TQ_optional)
+      Diag(DS.getOptionalSpecLoc(), diag::err_friend_decl_spec) << "_Optional";
     if (DS.getTypeQualifiers() & DeclSpec::TQ_restrict)
       Diag(DS.getRestrictSpecLoc(), diag::err_friend_decl_spec) << "restrict";
     if (DS.getTypeQualifiers() & DeclSpec::TQ_atomic)

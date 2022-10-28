@@ -161,6 +161,7 @@ void NativeTypeEnum::dump(raw_ostream &OS, int Indent,
   dumpSymbolField(OS, "unalignedType", isUnalignedType(), Indent);
   dumpSymbolField(OS, "isValueUdt", isValueUdt(), Indent);
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
+  dumpSymbolField(OS, "optionalType", isOptionalType(), Indent);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -367,6 +368,13 @@ bool NativeTypeEnum::isVolatileType() const {
   if (!Modifiers)
     return false;
   return ((Modifiers->getModifiers() & ModifierOptions::Volatile) !=
+          ModifierOptions::None);
+}
+
+bool NativeTypeEnum::isOptionalType() const {
+  if (!Modifiers)
+    return false;
+  return ((Modifiers->getModifiers() & ModifierOptions::Optional) !=
           ModifierOptions::None);
 }
 

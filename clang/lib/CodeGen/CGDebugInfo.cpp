@@ -942,6 +942,11 @@ static llvm::dwarf::Tag getNextQualifier(Qualifiers &Q) {
     Q.removeRestrict();
     return llvm::dwarf::DW_TAG_restrict_type;
   }
+  if (Q.hasOptional()) {
+    Q.removeOptional();
+    return llvm::dwarf::DW_TAG_LLVM_optional_type;
+  }
+
   return (llvm::dwarf::Tag)0;
 }
 
@@ -1698,6 +1703,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
   Qc.removeConst();
   Qc.removeVolatile();
   Qc.removeRestrict();
+  Qc.removeOptional();
   Qc.removeUnaligned();
   // Keep the removed qualifiers in sync with
   // CreateQualifiedType(const FunctionPrototype*, DIFile *Unit)

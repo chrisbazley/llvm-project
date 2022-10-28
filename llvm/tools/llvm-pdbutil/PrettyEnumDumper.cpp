@@ -30,6 +30,8 @@ void EnumDumper::start(const PDBSymbolTypeEnum &Symbol) {
       WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
     if (Symbol.isUnalignedType())
       WithColor(Printer, PDB_ColorItem::Keyword).get() << "unaligned ";
+    if (Symbol.isOptionalType())
+      WithColor(Printer, PDB_ColorItem::Keyword).get() << "_Optional ";
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "enum ";
     WithColor(Printer, PDB_ColorItem::Type).get() << Symbol.getName();
     return;

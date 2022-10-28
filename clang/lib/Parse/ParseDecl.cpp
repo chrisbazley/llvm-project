@@ -857,6 +857,7 @@ SourceLocation Parser::SkipExtendedMicrosoftTypeAttributes() {
     switch (Tok.getKind()) {
     case tok::kw_const:
     case tok::kw_volatile:
+    case tok::kw__Optional:
     case tok::kw___fastcall:
     case tok::kw___stdcall:
     case tok::kw___thiscall:
@@ -4244,6 +4245,10 @@ void Parser::ParseDeclarationSpecifiers(
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_volatile, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
+    case tok::kw__Optional:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_optional, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
     case tok::kw_restrict:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
                                  getLangOpts());
@@ -5329,6 +5334,7 @@ bool Parser::isTypeSpecifierQualifier() {
     // type-qualifier
   case tok::kw_const:
   case tok::kw_volatile:
+  case tok::kw__Optional:
   case tok::kw_restrict:
   case tok::kw__Sat:
 
@@ -5526,6 +5532,7 @@ bool Parser::isDeclarationSpecifier(
     // type-qualifier
   case tok::kw_const:
   case tok::kw_volatile:
+  case tok::kw__Optional:
   case tok::kw_restrict:
   case tok::kw__Sat:
 
@@ -5832,6 +5839,10 @@ void Parser::ParseTypeQualifierListOpt(
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_volatile, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
+    case tok::kw__Optional:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_optional, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
     case tok::kw_restrict:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
                                  getLangOpts());
@@ -6123,8 +6134,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
       // Remember that we parsed a pointer type, and remember the type-quals.
       D.AddTypeInfo(DeclaratorChunk::getPointer(
                         DS.getTypeQualifiers(), Loc, DS.getConstSpecLoc(),
-                        DS.getVolatileSpecLoc(), DS.getRestrictSpecLoc(),
-                        DS.getAtomicSpecLoc(), DS.getUnalignedSpecLoc()),
+                        DS.getVolatileSpecLoc(), DS.getOptionalSpecLoc(),
+                        DS.getRestrictSpecLoc(), DS.getAtomicSpecLoc(),
+                        DS.getUnalignedSpecLoc()),
                     std::move(DS.getAttributes()), SourceLocation());
     else
       // Remember that we parsed a Block type, and remember the type-quals.
@@ -6156,6 +6168,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
       if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
         Diag(DS.getVolatileSpecLoc(),
              diag::err_invalid_reference_qualifier_application) << "volatile";
+      if (DS.getTypeQualifiers() & DeclSpec::TQ_optional)
+        Diag(DS.getOptionalSpecLoc(),
+             diag::err_invalid_reference_qualifier_application) << "_Optional";
       // 'restrict' is permitted as an extension.
       if (DS.getTypeQualifiers() & DeclSpec::TQ_atomic)
         Diag(DS.getAtomicSpecLoc(),

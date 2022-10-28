@@ -230,6 +230,9 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
       break;
+    case eEncodingIsOptionalUID:
+      s->PutCString(" (unresolved _Optional type)");
+      break;
     }
   }
 }
@@ -290,6 +293,9 @@ void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
       break;
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
+      break;
+    case eEncodingIsOptionalUID:
+      s->PutCString(" (unresolved _Optional type)");
       break;
     }
   }
@@ -354,6 +360,7 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   case eEncodingIsConstUID:
   case eEncodingIsRestrictUID:
   case eEncodingIsVolatileUID:
+  case eEncodingIsOptionalUID:
   case eEncodingIsAtomicUID:
   case eEncodingIsTypedefUID: {
     Type *encoding_type = GetEncodingType();
@@ -511,6 +518,11 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
             encoding_type->GetForwardCompilerType().AddVolatileModifier();
         break;
 
+      case eEncodingIsOptionalUID:
+        m_compiler_type =
+            encoding_type->GetForwardCompilerType().AddOptionalModifier();
+        break;
+
       case eEncodingIsAtomicUID:
         m_compiler_type =
             encoding_type->GetForwardCompilerType().GetAtomicType();
@@ -568,6 +580,10 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
 
         case eEncodingIsVolatileUID:
           m_compiler_type = void_compiler_type.AddVolatileModifier();
+          break;
+
+        case eEncodingIsOptionalUID:
+          m_compiler_type = void_compiler_type.AddOptionalModifier();
           break;
 
         case eEncodingIsAtomicUID:

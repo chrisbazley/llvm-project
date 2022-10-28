@@ -1137,6 +1137,7 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   case tok::kw_virtual:
   case tok::kw_void:
   case tok::kw_volatile:
+  case tok::kw__Optional:
   case tok::kw_wchar_t:
   case tok::kw_while:
   case tok::kw__Bool:

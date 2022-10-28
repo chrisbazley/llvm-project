@@ -27,11 +27,14 @@ void NativeTypeVTShape::dump(raw_ostream &OS, int Indent,
   dumpSymbolField(OS, "constType", isConstType(), Indent);
   dumpSymbolField(OS, "unalignedType", isUnalignedType(), Indent);
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
+  dumpSymbolField(OS, "optionalType", isOptionalType(), Indent);
 }
 
 bool NativeTypeVTShape::isConstType() const { return false; }
 
 bool NativeTypeVTShape::isVolatileType() const { return false; }
+
+bool NativeTypeVTShape::isOptionalType() const { return false; }
 
 bool NativeTypeVTShape::isUnalignedType() const { return false; }
 

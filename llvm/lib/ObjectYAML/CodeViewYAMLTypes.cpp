@@ -339,6 +339,7 @@ void ScalarBitSetTraits<PointerOptions>::bitset(IO &IO,
   IO.bitSetCase(Options, "Restrict", PointerOptions::Restrict);
   IO.bitSetCase(Options, "WinRTSmartPointer",
                 PointerOptions::WinRTSmartPointer);
+  IO.bitSetCase(Options, "Optional", PointerOptions::Optional);
 }
 
 void ScalarBitSetTraits<ModifierOptions>::bitset(IO &IO,

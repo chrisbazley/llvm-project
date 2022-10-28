@@ -22,6 +22,8 @@ void BuiltinDumper::start(const PDBSymbolTypeBuiltin &Symbol) {
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "const ";
   if (Symbol.isVolatileType())
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
+  if (Symbol.isOptionalType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "_Optional ";
   WithColor(Printer, PDB_ColorItem::Type).get() << getTypeName(Symbol);
 }
 

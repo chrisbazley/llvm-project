@@ -464,6 +464,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (udt->isVolatileType())
       clang_type = clang_type.AddVolatileModifier();
 
+    if (udt->isOptionalType())
+      clang_type = clang_type.AddOptionalModifier();
+
     GetDeclarationForSymbol(type, decl);
     return m_ast.GetSymbolFile()->MakeType(
         type.getSymIndexId(), ConstString(name), udt->getLength(), nullptr,
@@ -533,6 +536,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (enum_type->isVolatileType())
       ast_enum = ast_enum.AddVolatileModifier();
 
+    if (enum_type->isOptionalType())
+      ast_enum = ast_enum.AddOptionalModifier();
+
     GetDeclarationForSymbol(type, decl);
     return m_ast.GetSymbolFile()->MakeType(
         type.getSymIndexId(), ConstString(name), bytes, nullptr,
@@ -578,6 +584,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
 
     if (type_def->isVolatileType())
       ast_typedef = ast_typedef.AddVolatileModifier();
+
+    if (type_def->isOptionalType())
+      ast_typedef = ast_typedef.AddOptionalModifier();
 
     GetDeclarationForSymbol(type, decl);
     std::optional<uint64_t> size;
@@ -654,6 +663,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       type_quals |= clang::Qualifiers::Const;
     if (func_sig->isVolatileType())
       type_quals |= clang::Qualifiers::Volatile;
+    if (func_sig->isOptionalType())
+      type_quals |= clang::Qualifiers::Optional;
     auto cc = TranslateCallingConvention(func_sig->getCallingConvention());
     CompilerType func_sig_ast_type =
         m_ast.CreateFunctionType(return_ast_type, arg_list.data(),
@@ -724,6 +735,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (builtin_type->isVolatileType())
       builtin_ast_type = builtin_ast_type.AddVolatileModifier();
 
+    if (builtin_type->isOptionalType())
+      builtin_ast_type = builtin_ast_type.AddOptionalModifier();
+
     auto type_name = GetPDBBuiltinTypeName(*builtin_type, builtin_ast_type);
 
     return m_ast.GetSymbolFile()->MakeType(
@@ -780,6 +794,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
 
     if (pointer_type->isRestrictedType())
       pointer_ast_type = pointer_ast_type.AddRestrictModifier();
+
+    if (pointer_type->isOptionalType())
+      pointer_ast_type = pointer_ast_type.AddOptionalModifier();
 
     return m_ast.GetSymbolFile()->MakeType(
         pointer_type->getSymIndexId(), ConstString(), pointer_type->getLength(),

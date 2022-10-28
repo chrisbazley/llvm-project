@@ -311,10 +311,11 @@ public:
     TQ_const       = 1,
     TQ_restrict    = 2,
     TQ_volatile    = 4,
-    TQ_unaligned   = 8,
+    TQ_optional    = 8,
+    TQ_unaligned   = 16,
     // This has no corresponding Qualifiers::TQ value, because it's not treated
     // as a qualifier in our type system.
-    TQ_atomic      = 16
+    TQ_atomic      = 32
   };
 
   /// ParsedSpecifiers - Flags to query which specifiers were applied.  This is
@@ -396,7 +397,7 @@ private:
   /// TSTNameLoc provides source range info for tag types.
   SourceLocation TSTNameLoc;
   SourceRange TypeofParensRange;
-  SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
+  SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_optionalLoc, TQ_atomicLoc,
       TQ_unalignedLoc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
   SourceLocation FS_explicitCloseParenLoc;
@@ -576,6 +577,7 @@ public:
   SourceLocation getConstSpecLoc() const { return TQ_constLoc; }
   SourceLocation getRestrictSpecLoc() const { return TQ_restrictLoc; }
   SourceLocation getVolatileSpecLoc() const { return TQ_volatileLoc; }
+  SourceLocation getOptionalSpecLoc() const { return TQ_optionalLoc; }
   SourceLocation getAtomicSpecLoc() const { return TQ_atomicLoc; }
   SourceLocation getUnalignedSpecLoc() const { return TQ_unalignedLoc; }
   SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
@@ -586,6 +588,7 @@ public:
     TQ_constLoc = SourceLocation();
     TQ_restrictLoc = SourceLocation();
     TQ_volatileLoc = SourceLocation();
+    TQ_optionalLoc = SourceLocation();
     TQ_atomicLoc = SourceLocation();
     TQ_unalignedLoc = SourceLocation();
     TQ_pipeLoc = SourceLocation();
@@ -1231,6 +1234,9 @@ struct DeclaratorChunk {
     /// The location of the volatile-qualifier, if any.
     SourceLocation VolatileQualLoc;
 
+    /// The location of the _Optional-qualifier, if any.
+    SourceLocation OptionalQualLoc;
+
     /// The location of the restrict-qualifier, if any.
     SourceLocation RestrictQualLoc;
 
@@ -1608,6 +1614,7 @@ struct DeclaratorChunk {
   static DeclaratorChunk getPointer(unsigned TypeQuals, SourceLocation Loc,
                                     SourceLocation ConstQualLoc,
                                     SourceLocation VolatileQualLoc,
+                                    SourceLocation OptionalQualLoc,
                                     SourceLocation RestrictQualLoc,
                                     SourceLocation AtomicQualLoc,
                                     SourceLocation UnalignedQualLoc) {
@@ -1618,6 +1625,7 @@ struct DeclaratorChunk {
     I.Ptr.TypeQuals       = TypeQuals;
     I.Ptr.ConstQualLoc    = ConstQualLoc;
     I.Ptr.VolatileQualLoc = VolatileQualLoc;
+    I.Ptr.OptionalQualLoc = OptionalQualLoc;
     I.Ptr.RestrictQualLoc = RestrictQualLoc;
     I.Ptr.AtomicQualLoc   = AtomicQualLoc;
     I.Ptr.UnalignedQualLoc = UnalignedQualLoc;

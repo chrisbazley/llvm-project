@@ -306,6 +306,7 @@ static bool SkipDIDerivedTag(unsigned Tag, bool skipTypedef) {
   if (Tag != dwarf::DW_TAG_typedef && Tag != dwarf::DW_TAG_const_type &&
       Tag != dwarf::DW_TAG_volatile_type &&
       Tag != dwarf::DW_TAG_restrict_type &&
+      Tag != dwarf::DW_TAG_LLVM_optional_type &&
       Tag != dwarf::DW_TAG_member)
     return false;
   if (Tag == dwarf::DW_TAG_typedef && !skipTypedef)

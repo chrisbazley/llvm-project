@@ -5281,6 +5281,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       Diag(DS.getConstSpecLoc(), DiagID) << "const";
     if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
       Diag(DS.getConstSpecLoc(), DiagID) << "volatile";
+    if (DS.getTypeQualifiers() & DeclSpec::TQ_optional)
+      Diag(DS.getConstSpecLoc(), DiagID) << "_Optional";
     // Restrict is covered above.
     if (DS.getTypeQualifiers() & DeclSpec::TQ_atomic)
       Diag(DS.getAtomicSpecLoc(), DiagID) << "_Atomic";
@@ -5537,6 +5539,11 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
              diag::ext_anonymous_struct_union_qualified)
           << Record->isUnion() << "volatile"
           << FixItHint::CreateRemoval(DS.getVolatileSpecLoc());
+      if (DS.getTypeQualifiers() & DeclSpec::TQ_optional)
+        Diag(DS.getOptionalSpecLoc(),
+             diag::ext_anonymous_struct_union_qualified)
+          << Record->isUnion() << "_Optional"
+          << FixItHint::CreateRemoval(DS.getOptionalSpecLoc());
       if (DS.getTypeQualifiers() & DeclSpec::TQ_restrict)
         Diag(DS.getRestrictSpecLoc(),
              diag::ext_anonymous_struct_union_qualified)

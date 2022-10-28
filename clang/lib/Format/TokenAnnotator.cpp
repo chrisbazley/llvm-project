@@ -2199,7 +2199,7 @@ private:
 
     // Functions which end with decorations like volatile, noexcept are unlikely
     // to be casts.
-    if (Tok.Next->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw_const,
+    if (Tok.Next->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw__Optional, tok::kw_const,
                           tok::kw_requires, tok::kw_throw, tok::arrow,
                           Keywords.kw_override, Keywords.kw_final) ||
         isCpp11AttributeSpecifier(*Tok.Next)) {
@@ -3615,7 +3615,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Previous) {
       if (Previous->endsSequence(tok::kw_operator))
         return Style.PointerAlignment != FormatStyle::PAS_Left;
-      if (Previous->is(tok::kw_const) || Previous->is(tok::kw_volatile)) {
+      if (Previous->is(tok::kw_const) || Previous->is(tok::kw_volatile) || Previous->is(tok::kw__Optional)) {
         return (Style.PointerAlignment != FormatStyle::PAS_Left) ||
                (Style.SpaceAroundPointerQualifiers ==
                 FormatStyle::SAPQ_After) ||
@@ -3803,7 +3803,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
   if (Right.getType() == TT_TrailingAnnotation &&
       Right.isOneOf(tok::amp, tok::ampamp) &&
-      Left.isOneOf(tok::kw_const, tok::kw_volatile) &&
+      Left.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw__Optional) &&
       (!Right.Next || Right.Next->is(tok::semi))) {
     // Match const and volatile ref-qualifiers without any additional
     // qualifiers such as

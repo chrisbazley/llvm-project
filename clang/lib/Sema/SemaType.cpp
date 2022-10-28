@@ -781,6 +781,7 @@ static void diagnoseAndRemoveTypeQualifiers(Sema &S, const DeclSpec &DS,
   for (QualLoc Qual : {QualLoc(DeclSpec::TQ_const, DS.getConstSpecLoc()),
                        QualLoc(DeclSpec::TQ_restrict, DS.getRestrictSpecLoc()),
                        QualLoc(DeclSpec::TQ_volatile, DS.getVolatileSpecLoc()),
+                       QualLoc(DeclSpec::TQ_optional, DS.getOptionalSpecLoc()),
                        QualLoc(DeclSpec::TQ_atomic, DS.getAtomicSpecLoc())}) {
     if (!(RemoveTQs & Qual.first))
       continue;
@@ -1878,7 +1879,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     if (TypeQuals && Result->isReferenceType()) {
       diagnoseAndRemoveTypeQualifiers(
           S, DS, TypeQuals, Result,
-          DeclSpec::TQ_const | DeclSpec::TQ_volatile | DeclSpec::TQ_atomic,
+          DeclSpec::TQ_const | DeclSpec::TQ_volatile | DeclSpec::TQ_optional | DeclSpec::TQ_atomic,
           diag::warn_typecheck_reference_qualifiers);
     }
 
@@ -1897,7 +1898,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
           << "volatile";
       }
 
-      // C90 doesn't have restrict nor _Atomic, so it doesn't force us to
+      // C90 doesn't have restrict, nor _Optional, nor _Atomic, so it doesn't force us to
       // produce a warning in this case.
     }
 
@@ -1987,7 +1988,7 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
   // Ignore any attempt to form a cv-qualified reference.
   if (T->isReferenceType())
     CVRAU &=
-        ~(DeclSpec::TQ_const | DeclSpec::TQ_volatile | DeclSpec::TQ_atomic);
+        ~(DeclSpec::TQ_const | DeclSpec::TQ_volatile | DeclSpec::TQ_optional | DeclSpec::TQ_atomic);
 
   // Convert from DeclSpec::TQ to Qualifiers::TQ by just dropping TQ_atomic and
   // TQ_unaligned;
@@ -3230,6 +3231,7 @@ void Sema::diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
                                      SourceLocation FallbackLoc,
                                      SourceLocation ConstQualLoc,
                                      SourceLocation VolatileQualLoc,
+                                     SourceLocation OptionalQualLoc,
                                      SourceLocation RestrictQualLoc,
                                      SourceLocation AtomicQualLoc,
                                      SourceLocation UnalignedQualLoc) {
@@ -3240,9 +3242,10 @@ void Sema::diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
     const char *Name;
     unsigned Mask;
     SourceLocation Loc;
-  } const QualKinds[5] = {
+  } const QualKinds[6] = {
     { "const", DeclSpec::TQ_const, ConstQualLoc },
     { "volatile", DeclSpec::TQ_volatile, VolatileQualLoc },
+    { "_Optional", DeclSpec::TQ_optional, OptionalQualLoc },
     { "restrict", DeclSpec::TQ_restrict, RestrictQualLoc },
     { "__unaligned", DeclSpec::TQ_unaligned, UnalignedQualLoc },
     { "_Atomic", DeclSpec::TQ_atomic, AtomicQualLoc }
@@ -3251,7 +3254,7 @@ void Sema::diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
   SmallString<32> QualStr;
   unsigned NumQuals = 0;
   SourceLocation Loc;
-  FixItHint FixIts[5];
+  FixItHint FixIts[6];
 
   // Build a string naming the redundant qualifiers.
   for (auto &E : QualKinds) {
@@ -3273,7 +3276,7 @@ void Sema::diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
   }
 
   Diag(Loc.isInvalid() ? FallbackLoc : Loc, DiagID)
-    << QualStr << NumQuals << FixIts[0] << FixIts[1] << FixIts[2] << FixIts[3];
+    << QualStr << NumQuals << FixIts[0] << FixIts[1] << FixIts[2] << FixIts[3] << FixIts[4];
 }
 
 // Diagnose pointless type qualifiers on the return type of a function.
@@ -3305,6 +3308,7 @@ static void diagnoseRedundantReturnTypeQualifiers(Sema &S, QualType RetTy,
           SourceLocation(),
           PTI.ConstQualLoc,
           PTI.VolatileQualLoc,
+          PTI.OptionalQualLoc,
           PTI.RestrictQualLoc,
           PTI.AtomicQualLoc,
           PTI.UnalignedQualLoc);
@@ -3342,6 +3346,7 @@ static void diagnoseRedundantReturnTypeQualifiers(Sema &S, QualType RetTy,
                               D.getIdentifierLoc(),
                               D.getDeclSpec().getConstSpecLoc(),
                               D.getDeclSpec().getVolatileSpecLoc(),
+                              D.getDeclSpec().getOptionalSpecLoc(),
                               D.getDeclSpec().getRestrictSpecLoc(),
                               D.getDeclSpec().getAtomicSpecLoc(),
                               D.getDeclSpec().getUnalignedSpecLoc());

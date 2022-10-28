@@ -1261,6 +1261,10 @@ bool DIARawSymbol::isVolatileType() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_volatileType);
 }
 
+bool DIARawSymbol::isOptionalType() const {
+  return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_optionalType);
+}
+
 bool DIARawSymbol::wasInlined() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_wasInlined);
 }

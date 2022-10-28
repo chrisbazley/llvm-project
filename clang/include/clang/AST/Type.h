@@ -65,7 +65,7 @@ class TemplateParameterList;
 class Type;
 
 enum {
-  TypeAlignmentInBits = 4,
+  TypeAlignmentInBits = 5,
   TypeAlignment = 1 << TypeAlignmentInBits
 };
 
@@ -149,7 +149,8 @@ public:
     Const    = 0x1,
     Restrict = 0x2,
     Volatile = 0x4,
-    CVRMask = Const | Volatile | Restrict
+    Optional = 0x8,
+    CVRMask = Const | Volatile | Restrict | Optional
   };
 
   enum GC {
@@ -186,7 +187,7 @@ public:
     MaxAddressSpace = 0x7fffffu,
 
     /// The width of the "fast" qualifier mask.
-    FastWidth = 3,
+    FastWidth = 4,
 
     /// The fast qualifier mask.
     FastMask = (1 << FastWidth) - 1
@@ -277,6 +278,16 @@ public:
   Qualifiers withVolatile() const {
     Qualifiers Qs = *this;
     Qs.addVolatile();
+    return Qs;
+  }
+
+  bool hasOptional() const { return Mask & Optional; }
+  bool hasOnlyOptional() const { return Mask == Optional; }
+  void removeOptional() { Mask &= ~Optional; }
+  void addOptional() { Mask |= Optional; }
+  Qualifiers withOptional() const {
+    Qualifiers Qs = *this;
+    Qs.addOptional();
     return Qs;
   }
 
@@ -608,19 +619,19 @@ public:
   }
 
 private:
-  // bits:     |0 1 2|3|4 .. 5|6  ..  8|9   ...   31|
-  //           |C R V|U|GCAttr|Lifetime|AddressSpace|
+  // bits:     |0 1 2 3|4|5 .. 6|7  ..  9|10  ...   31|
+  //           |C R V O|U|GCAttr|Lifetime|AddressSpace|
   uint32_t Mask = 0;
 
-  static const uint32_t UMask = 0x8;
-  static const uint32_t UShift = 3;
-  static const uint32_t GCAttrMask = 0x30;
-  static const uint32_t GCAttrShift = 4;
-  static const uint32_t LifetimeMask = 0x1C0;
-  static const uint32_t LifetimeShift = 6;
+  static const uint32_t UMask = 0x10;
+  static const uint32_t UShift = 4;
+  static const uint32_t GCAttrMask = 0x60;
+  static const uint32_t GCAttrShift = 5;
+  static const uint32_t LifetimeMask = 0x380;
+  static const uint32_t LifetimeShift = 7;
   static const uint32_t AddressSpaceMask =
       ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
-  static const uint32_t AddressSpaceShift = 9;
+  static const uint32_t AddressSpaceShift = 10;
 };
 
 class QualifiersAndAtomic {
@@ -635,22 +646,28 @@ public:
   operator Qualifiers() const { return Quals; }
 
   bool hasVolatile() const { return Quals.hasVolatile(); }
+  bool hasOptional() const { return Quals.hasOptional(); }
   bool hasConst() const { return Quals.hasConst(); }
   bool hasRestrict() const { return Quals.hasRestrict(); }
   bool hasAtomic() const { return HasAtomic; }
 
   void addVolatile() { Quals.addVolatile(); }
+  void addOptional() { Quals.addOptional(); }
   void addConst() { Quals.addConst(); }
   void addRestrict() { Quals.addRestrict(); }
   void addAtomic() { HasAtomic = true; }
 
   void removeVolatile() { Quals.removeVolatile(); }
+  void removeOptional() { Quals.removeOptional(); }
   void removeConst() { Quals.removeConst(); }
   void removeRestrict() { Quals.removeRestrict(); }
   void removeAtomic() { HasAtomic = false; }
 
   QualifiersAndAtomic withVolatile() {
     return {Quals.withVolatile(), HasAtomic};
+  }
+  QualifiersAndAtomic withOptional() {
+    return {Quals.withOptional(), HasAtomic};
   }
   QualifiersAndAtomic withConst() { return {Quals.withConst(), HasAtomic}; }
   QualifiersAndAtomic withRestrict() {
@@ -837,6 +854,16 @@ public:
   /// Determine whether this type is volatile-qualified.
   bool isVolatileQualified() const;
 
+  /// Determine whether this particular QualType instance has the
+  /// "_Optional" qualifier set, without looking through typedefs that may have
+  /// added "_Optional" at a different level.
+  bool isLocalOptionalQualified() const {
+    return (getLocalFastQualifiers() & Qualifiers::Optional);
+  }
+
+  /// Determine whether this type is _Optional-qualified.
+  bool isOptionalQualified() const;
+
   /// Determine whether this particular QualType instance has any
   /// qualifiers, without looking through any typedefs that might add
   /// qualifiers at a different level.
@@ -924,6 +951,13 @@ public:
     return withFastQualifiers(Qualifiers::Volatile);
   }
 
+  /// Add the `_Optional` type qualifier to this QualType.
+  void addOptional() {
+    addFastQualifiers(Qualifiers::Optional);
+  }
+  QualType withOptional() const {
+    return withFastQualifiers(Qualifiers::Optional);
+  }
   /// Add the `restrict` qualifier to this QualType.
   void addRestrict() {
     addFastQualifiers(Qualifiers::Restrict);
@@ -944,6 +978,7 @@ public:
 
   void removeLocalConst();
   void removeLocalVolatile();
+  void removeLocalOptional();
   void removeLocalRestrict();
   void removeLocalCVRQualifiers(unsigned Mask);
 
@@ -1563,7 +1598,7 @@ enum class AutoTypeKeyword {
 ///
 /// Types, once created, are immutable.
 ///
-class alignas(8) Type : public ExtQualsTypeCommonBase {
+class alignas(16) Type : public ExtQualsTypeCommonBase {
 public:
   enum TypeClass {
 #define TYPE(Class, Base) Class,
@@ -1950,7 +1985,7 @@ protected:
   Type(TypeClass tc, QualType canon, TypeDependence Dependence)
       : ExtQualsTypeCommonBase(this,
                                canon.isNull() ? QualType(this_(), 0) : canon) {
-    static_assert(sizeof(*this) <= 8 + sizeof(ExtQualsTypeCommonBase),
+    static_assert(sizeof(*this) <= 16 + sizeof(ExtQualsTypeCommonBase),
                   "changing bitfields changed sizeof(Type)!");
     static_assert(alignof(decltype(*this)) % sizeof(void *) == 0,
                   "Insufficient alignment!");
@@ -3962,6 +3997,7 @@ public:
 
   bool isConst() const { return getFastTypeQuals().hasConst(); }
   bool isVolatile() const { return getFastTypeQuals().hasVolatile(); }
+  bool isOptional() const { return getFastTypeQuals().hasOptional(); }
   bool isRestrict() const { return getFastTypeQuals().hasRestrict(); }
 
   /// Determine the type of an expression that calls a function of
@@ -6718,6 +6754,11 @@ inline bool QualType::isVolatileQualified() const {
          getCommonPtr()->CanonicalType.isLocalVolatileQualified();
 }
 
+inline bool QualType::isOptionalQualified() const {
+  return isLocalOptionalQualified() ||
+         getCommonPtr()->CanonicalType.isLocalOptionalQualified();
+}
+
 inline bool QualType::hasQualifiers() const {
   return hasLocalQualifiers() ||
          getCommonPtr()->CanonicalType.hasLocalQualifiers();
@@ -6747,6 +6788,10 @@ inline void QualType::removeLocalRestrict() {
 
 inline void QualType::removeLocalVolatile() {
   removeLocalFastQualifiers(Qualifiers::Volatile);
+}
+
+inline void QualType::removeLocalOptional() {
+  removeLocalFastQualifiers(Qualifiers::Optional);
 }
 
 inline void QualType::removeLocalCVRQualifiers(unsigned Mask) {

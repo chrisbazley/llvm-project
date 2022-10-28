@@ -1904,7 +1904,10 @@ def err_qualified_member_of_unrelated : Error<
 def err_member_function_call_bad_cvr : Error<
   "'this' argument to member function %0 has type %1, but function is not marked "
   "%select{const|restrict|const or restrict|volatile|const or volatile|"
-  "volatile or restrict|const, volatile, or restrict}2">;
+  "volatile or restrict|const, volatile, or restrict|_Optional|"
+  "const or _Optional|restrict or _Optional|const, restrict or _Optional|"
+  "volatile or _Optional|const, volatile or _Optional|"
+  "volatile, restrict or _Optional|const, volatile, restrict or _Optional}2">;
 def err_member_function_call_bad_ref : Error<
   "'this' argument to member function %0 is an %select{lvalue|rvalue}1, "
   "but function has %select{non-const lvalue|rvalue}2 ref-qualifier">;
@@ -4653,13 +4656,19 @@ def note_ovl_candidate_bad_cvr_this : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "'this' argument has type %3, but method is not marked "
     "%select{const|restrict|const or restrict|volatile|const or volatile|"
-    "volatile or restrict|const, volatile, or restrict}4">;
+    "volatile or restrict|const, volatile, or restrict|_Optional|"
+    "const or _Optional|restrict or _Optional|const, restrict or _Optional|"
+    "volatile or _Optional|const, volatile or _Optional|"
+    "volatile, restrict or _Optional|const, volatile, restrict or _Optional}4">;
 def note_ovl_candidate_bad_cvr : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "%ordinal5 argument (%3) would lose "
     "%select{const|restrict|const and restrict|volatile|const and volatile|"
-    "volatile and restrict|const, volatile, and restrict}4 qualifier"
-    "%select{||s||s|s|s}4">;
+    "volatile and restrict|const, volatile, and restrict|_Optional|"
+    "const and _Optional|restrict and _Optional|const, restrict and _Optional|"
+    "volatile and _Optional|const, volatile and _Optional|"
+    "volatile, restrict and _Optional|const, volatile, restrict and _Optional}4 qualifier"
+    "%select{||s||s|s|s||s|s|s|s|s|s|s}4">;
 def note_ovl_candidate_bad_unaligned : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "%ordinal5 argument (%3) would lose __unaligned qualifier">;

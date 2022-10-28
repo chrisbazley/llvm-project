@@ -1648,6 +1648,7 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
   case dwarf::DW_TAG_restrict_type:
   case dwarf::DW_TAG_const_type:
   case dwarf::DW_TAG_volatile_type:
+  case dwarf::DW_TAG_LLVM_optional_type:
   // TODO: add support for DW_TAG_atomic_type here
     return lowerTypeModifier(cast<DIDerivedType>(Ty));
   case dwarf::DW_TAG_subroutine_type:
@@ -1989,6 +1990,10 @@ TypeIndex CodeViewDebug::lowerTypeModifier(const DIDerivedType *Ty) {
     case dwarf::DW_TAG_volatile_type:
       Mods |= ModifierOptions::Volatile;
       PO |= PointerOptions::Volatile;
+      break;
+    case dwarf::DW_TAG_LLVM_optional_type:
+      Mods |= ModifierOptions::Optional;
+      PO |= PointerOptions::Optional;
       break;
     case dwarf::DW_TAG_restrict_type:
       // Only pointer types be marked with __restrict. There is no known flag
@@ -2334,6 +2339,7 @@ void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
     switch (Ty->getTag()) {
     case dwarf::DW_TAG_const_type:
     case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_LLVM_optional_type:
       // FIXME: we should apply the qualifier types to the indirect fields
       // rather than dropping them.
       Ty = cast<DIDerivedType>(Ty)->getBaseType();

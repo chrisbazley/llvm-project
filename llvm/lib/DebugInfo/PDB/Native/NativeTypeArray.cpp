@@ -41,6 +41,7 @@ void NativeTypeArray::dump(raw_ostream &OS, int Indent,
   dumpSymbolField(OS, "constType", isConstType(), Indent);
   dumpSymbolField(OS, "unalignedType", isUnalignedType(), Indent);
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
+  dumpSymbolField(OS, "optionalType", isOptionalType(), Indent);
 }
 
 SymIndexId NativeTypeArray::getArrayIndexTypeId() const {
@@ -52,6 +53,8 @@ bool NativeTypeArray::isConstType() const { return false; }
 bool NativeTypeArray::isUnalignedType() const { return false; }
 
 bool NativeTypeArray::isVolatileType() const { return false; }
+
+bool NativeTypeArray::isOptionalType() const { return false; }
 
 uint32_t NativeTypeArray::getCount() const {
   NativeRawSymbol &Element =

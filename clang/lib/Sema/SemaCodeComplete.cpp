@@ -5849,6 +5849,8 @@ static void AddTypeQualifierResults(DeclSpec &DS, ResultBuilder &Results,
     Results.AddResult("const");
   if (!(DS.getTypeQualifiers() & DeclSpec::TQ_volatile))
     Results.AddResult("volatile");
+  if (!(DS.getTypeQualifiers() & DeclSpec::TQ_optional))
+    Results.AddResult("_Optional");
   if (LangOpts.C99 && !(DS.getTypeQualifiers() & DeclSpec::TQ_restrict))
     Results.AddResult("restrict");
   if (LangOpts.C11 && !(DS.getTypeQualifiers() & DeclSpec::TQ_atomic))

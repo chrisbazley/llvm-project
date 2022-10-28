@@ -469,6 +469,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_rvalue_reference_type:
   case DW_TAG_const_type:
   case DW_TAG_restrict_type:
+  case DW_TAG_optional_type:
   case DW_TAG_volatile_type:
   case DW_TAG_atomic_type:
   case DW_TAG_unspecified_type: {
@@ -620,6 +621,9 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     break;
   case DW_TAG_restrict_type:
     encoding_data_type = Type::eEncodingIsRestrictUID;
+    break;
+  case DW_TAG_optional_type:
+    encoding_data_type = Type::eEncodingIsOptionalUID;
     break;
   case DW_TAG_volatile_type:
     encoding_data_type = Type::eEncodingIsVolatileUID;
@@ -3113,6 +3117,8 @@ size_t DWARFASTParserClang::ParseChildParameters(
                   type_quals |= clang::Qualifiers::Const;
                 if (encoding_mask & (1u << Type::eEncodingIsVolatileUID))
                   type_quals |= clang::Qualifiers::Volatile;
+                if (encoding_mask & (1u << Type::eEncodingIsOptionalUID))
+                  type_quals |= clang::Qualifiers::Optional;
               }
             }
           }

@@ -247,6 +247,7 @@ public:
   virtual bool isVirtualBaseClass() const = 0;
   virtual bool isVirtualInheritance() const = 0;
   virtual bool isVolatileType() const = 0;
+  virtual bool isOptionalType() const = 0;
   virtual bool wasInlined() const = 0;
   virtual std::string getUnused() const = 0;
 };

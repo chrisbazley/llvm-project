@@ -431,6 +431,8 @@ void DeclSpec::forEachCVRUQualifier(
     Handle(TQ_const, "const", TQ_constLoc);
   if (TypeQualifiers & TQ_volatile)
     Handle(TQ_volatile, "volatile", TQ_volatileLoc);
+  if (TypeQualifiers & TQ_optional)
+    Handle(TQ_optional, "_Optional", TQ_optionalLoc);
   if (TypeQualifiers & TQ_restrict)
     Handle(TQ_restrict, "restrict", TQ_restrictLoc);
   if (TypeQualifiers & TQ_unaligned)
@@ -617,6 +619,7 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   case DeclSpec::TQ_const:       return "const";
   case DeclSpec::TQ_restrict:    return "restrict";
   case DeclSpec::TQ_volatile:    return "volatile";
+  case DeclSpec::TQ_optional:    return "_Optional";
   case DeclSpec::TQ_atomic:      return "_Atomic";
   case DeclSpec::TQ_unaligned:   return "__unaligned";
   }
@@ -985,6 +988,7 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   case TQ_const:    TQ_constLoc = Loc; return false;
   case TQ_restrict: TQ_restrictLoc = Loc; return false;
   case TQ_volatile: TQ_volatileLoc = Loc; return false;
+  case TQ_optional: TQ_optionalLoc = Loc; return false;
   case TQ_unaligned: TQ_unalignedLoc = Loc; return false;
   case TQ_atomic:   TQ_atomicLoc = Loc; return false;
   }
@@ -1135,11 +1139,12 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
        getTypeSpecSign() != TypeSpecifierSign::Unspecified ||
        TypeAltiVecVector || TypeAltiVecPixel || TypeAltiVecBool ||
        TypeQualifiers)) {
-    const unsigned NumLocs = 9;
+    const unsigned NumLocs = 10;
     SourceLocation ExtraLocs[NumLocs] = {
         TSWRange.getBegin(), TSCLoc,       TSSLoc,
         AltiVecLoc,          TQ_constLoc,  TQ_restrictLoc,
-        TQ_volatileLoc,      TQ_atomicLoc, TQ_unalignedLoc};
+        TQ_volatileLoc,      TQ_optionalLoc, TQ_atomicLoc,
+        TQ_unalignedLoc};
     FixItHint Hints[NumLocs];
     SourceLocation FirstLoc;
     for (unsigned I = 0; I != NumLocs; ++I) {

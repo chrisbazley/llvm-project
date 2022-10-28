@@ -507,6 +507,7 @@ std::optional<uint64_t> DWARFDie::getTypeSize(uint64_t PointerSize) {
   case DW_TAG_immutable_type:
   case DW_TAG_volatile_type:
   case DW_TAG_restrict_type:
+  case DW_TAG_LLVM_optional_type:
   case DW_TAG_typedef: {
     if (DWARFDie BaseType = getAttributeValueAsReferencedDie(DW_AT_type))
       return BaseType.getTypeSize(PointerSize);

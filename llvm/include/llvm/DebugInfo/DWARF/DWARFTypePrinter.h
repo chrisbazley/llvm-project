@@ -48,7 +48,7 @@ struct DWARFTypePrinter {
   DWARFDie appendQualifiedNameBefore(DWARFDie D);
   bool appendTemplateParameters(DWARFDie D, bool *FirstParameter = nullptr);
   void decomposeConstVolatile(DWARFDie &N, DWARFDie &T, DWARFDie &C,
-                              DWARFDie &V);
+                              DWARFDie &V, DWARFDie &O);
   void appendConstVolatileQualifierAfter(DWARFDie N);
   void appendConstVolatileQualifierBefore(DWARFDie N);
 
@@ -58,7 +58,7 @@ struct DWARFTypePrinter {
 
   void appendSubroutineNameAfter(DWARFDie D, DWARFDie Inner,
                                  bool SkipFirstParamIfArtificial, bool Const,
-                                 bool Volatile);
+                                 bool Volatile, bool Optional);
   void appendScopes(DWARFDie D);
 };
 

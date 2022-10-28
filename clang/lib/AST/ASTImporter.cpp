@@ -1468,7 +1468,7 @@ ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
   // See comments in InjectedClassNameType definition for details
   // return Importer.getToContext().getInjectedClassNameType(D, InjType);
   enum {
-    TypeAlignmentInBits = 4,
+    TypeAlignmentInBits = 5,
     TypeAlignment = 1 << TypeAlignmentInBits
   };
 
