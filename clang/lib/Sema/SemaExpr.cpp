@@ -14585,10 +14585,18 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   if (getLangOpts().C99) {
     // Implement C99-only parts of addressof rules.
     if (UnaryOperator* uOp = dyn_cast<UnaryOperator>(op)) {
-      if (uOp->getOpcode() == UO_Deref)
+      if (uOp->getOpcode() == UO_Deref) {
         // Per C99 6.5.3.2, the address of a deref always returns a valid result
         // (assuming the deref expression is valid).
-        return uOp->getSubExpr()->getType();
+        auto Result = uOp->getSubExpr()->getType();
+        if (const PointerType *PT = Result->getAs<PointerType>()) {
+          // A dereferenced pointer is not a null pointer (by definition).
+          auto PointeeType = PT->getPointeeType();
+          Result =
+              Context.getPointerType(Context.getNonOptionalType(PointeeType));
+        }
+        return Result;
+      }
     }
     // Technically, there should be a check for array subscript
     // expressions here, but the result of one is always an lvalue anyway.
@@ -14602,6 +14610,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
 
   Expr::LValueClassification lval = op->ClassifyLValue(Context);
   unsigned AddressOfError = AO_No_Error;
+  QualType Ty = Context.getNonOptionalType(op->getType());
 
   if (lval == Expr::LV_ClassTemporary || lval == Expr::LV_ArrayTemporary) {
     bool sfinae = (bool)isSFINAEContext();
@@ -14611,10 +14620,9 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     if (sfinae)
       return QualType();
     // Materialize the temporary as an lvalue so that we can take its address.
-    OrigOp = op =
-        CreateMaterializeTemporaryExpr(op->getType(), OrigOp.get(), true);
+    OrigOp = op = CreateMaterializeTemporaryExpr(Ty, OrigOp.get(), true);
   } else if (isa<ObjCSelectorExpr>(op)) {
-    return Context.getPointerType(op->getType());
+    return Context.getPointerType(Ty);
   } else if (lval == Expr::LV_MemberFunction) {
     // If it's an instance method, make a member pointer.
     // The expression must have exactly the form &A::foo.
@@ -14652,7 +14660,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
       Diag(OpLoc, diag::err_typecheck_addrof_dtor) << op->getSourceRange();
 
     QualType MPTy = Context.getMemberPointerType(
-        op->getType(), Context.getTypeDeclType(MD->getParent()).getTypePtr());
+        Ty, Context.getTypeDeclType(MD->getParent()).getTypePtr());
     // Under the MS ABI, lock down the inheritance model now.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft())
       (void)isCompleteType(OpLoc, MPTy);
@@ -14660,7 +14668,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   } else if (lval != Expr::LV_Valid && lval != Expr::LV_IncompleteVoidType) {
     // C99 6.5.3.2p1
     // The operand must be either an l-value or a function designator
-    if (!op->getType()->isFunctionType()) {
+    if (!Ty->isFunctionType()) {
       // Use a special diagnostic for loads from property references.
       if (isa<PseudoObjectExpr>(op)) {
         AddressOfError = AO_Property_Expansion;
@@ -14711,8 +14719,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
             Ctx = Ctx->getParent();
 
           QualType MPTy = Context.getMemberPointerType(
-              op->getType(),
-              Context.getTypeDeclType(cast<RecordDecl>(Ctx)).getTypePtr());
+              Ty, Context.getTypeDeclType(cast<RecordDecl>(Ctx)).getTypePtr());
           // Under the MS ABI, lock down the inheritance model now.
           if (Context.getTargetInfo().getCXXABI().isMicrosoft())
             (void)isCompleteType(OpLoc, MPTy);
@@ -14737,12 +14744,12 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   }
 
   // If the operand has type "type", the result has type "pointer to type".
-  if (op->getType()->isObjCObjectType())
-    return Context.getObjCObjectPointerType(op->getType());
+  if (Ty->isObjCObjectType())
+    return Context.getObjCObjectPointerType(Ty);
 
   CheckAddressOfPackedMember(op);
 
-  return Context.getPointerType(op->getType());
+  return Context.getPointerType(Ty);
 }
 
 static void RecordModifiableNonNullParam(Sema &S, const Expr *Exp) {
