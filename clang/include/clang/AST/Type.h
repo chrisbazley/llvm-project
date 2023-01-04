@@ -1400,6 +1400,12 @@ public:
   /// Remove all qualifiers including _Atomic.
   QualType getAtomicUnqualifiedType() const;
 
+  /// Determine the nullability of the given type.
+  ///
+  /// Accounts for nullability that is only captured as sugar within the type
+  /// system, as well as when it is part of the canonical type.
+  std::optional<NullabilityKind> getNullability() const;
+
 private:
   // These methods are implemented in a separate translation unit;
   // "static"-ize them to avoid creating temporary QualTypes in the

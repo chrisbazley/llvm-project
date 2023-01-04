@@ -2370,8 +2370,8 @@ static bool CheckMethodOverrideReturn(Sema &S,
       !S.Context.hasSameNullabilityTypeQualifier(MethodImpl->getReturnType(),
                                                  MethodDecl->getReturnType(),
                                                  false)) {
-    auto nullabilityMethodImpl = *MethodImpl->getReturnType()->getNullability();
-    auto nullabilityMethodDecl = *MethodDecl->getReturnType()->getNullability();
+    auto nullabilityMethodImpl = *MethodImpl->getReturnType().getNullability();
+    auto nullabilityMethodDecl = *MethodDecl->getReturnType().getNullability();
     S.Diag(MethodImpl->getLocation(),
            diag::warn_conflicting_nullability_attr_overriding_ret_types)
         << DiagNullabilityKind(nullabilityMethodImpl,
@@ -2458,10 +2458,10 @@ static bool CheckMethodOverrideParam(Sema &S,
       !S.Context.hasSameNullabilityTypeQualifier(ImplTy, IfaceTy, true)) {
     S.Diag(ImplVar->getLocation(),
            diag::warn_conflicting_nullability_attr_overriding_param_types)
-        << DiagNullabilityKind(*ImplTy->getNullability(),
+        << DiagNullabilityKind(*ImplTy.getNullability(),
                                ((ImplVar->getObjCDeclQualifier() &
                                  Decl::OBJC_TQ_CSNullability) != 0))
-        << DiagNullabilityKind(*IfaceTy->getNullability(),
+        << DiagNullabilityKind(*IfaceTy.getNullability(),
                                ((IfaceVar->getObjCDeclQualifier() &
                                  Decl::OBJC_TQ_CSNullability) != 0));
     S.Diag(IfaceVar->getLocation(), diag::note_previous_declaration);
@@ -4546,8 +4546,8 @@ static QualType mergeTypeNullabilityForRedecl(Sema &S, SourceLocation loc,
                                               QualType prevType,
                                               bool prevUsesCSKeyword) {
   // Determine the nullability of both types.
-  auto nullability = type->getNullability();
-  auto prevNullability = prevType->getNullability();
+  auto nullability = type.getNullability();
+  auto prevNullability = prevType.getNullability();
 
   // Easy case: both have nullability.
   if (nullability.has_value() == prevNullability.has_value()) {

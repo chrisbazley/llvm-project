@@ -3399,8 +3399,8 @@ static bool EquivalentArrayTypes(QualType Old, QualType New,
 static void mergeParamDeclTypes(ParmVarDecl *NewParam,
                                 const ParmVarDecl *OldParam,
                                 Sema &S) {
-  if (auto Oldnullability = OldParam->getType()->getNullability()) {
-    if (auto Newnullability = NewParam->getType()->getNullability()) {
+  if (auto Oldnullability = OldParam->getType().getNullability()) {
+    if (auto Newnullability = NewParam->getType().getNullability()) {
       if (*Oldnullability != *Newnullability) {
         S.Diag(NewParam->getLocation(), diag::warn_mismatched_nullability_attr)
           << DiagNullabilityKind(
