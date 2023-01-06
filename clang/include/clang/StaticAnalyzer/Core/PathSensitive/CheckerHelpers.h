@@ -62,6 +62,10 @@ enum class Nullability : char {
   Nonnull
 };
 
+/// Find out whether the given type is a pointer to an optional value.
+/// If true then the pointer value should be treated as nullable.
+bool pointeeIsOptional(QualType Type);
+
 /// Get nullability annotation for a given type.
 Nullability getNullabilityAnnotation(QualType Type);
 
