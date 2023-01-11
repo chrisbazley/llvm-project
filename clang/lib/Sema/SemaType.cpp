@@ -5807,6 +5807,16 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     }
   }
 
+  // Types other than those of a pointed-to object or pointed-to incomplete type
+  // shall not be _Optional-qualified in a declaration.
+  if (T.isOptionalQualified() && !IsTypedefName &&
+      (!T->isArrayType() || !D.isPrototypeContext())) {
+    S.Diag(D.getDeclSpec().getOptionalSpecLoc(),
+           diag::err_typecheck_invalid_optional_not_pointee)
+        << T;
+    Context.getNonOptionalType(T);
+  }
+
   // Apply any undistributed attributes from the declaration or declarator.
   ParsedAttributesView NonSlidingAttrs;
   for (ParsedAttr &AL : D.getDeclarationAttributes()) {

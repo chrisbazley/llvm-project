@@ -5088,6 +5088,13 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       Diag(DS.getRestrictSpecLoc(),
            diag::err_typecheck_invalid_restrict_not_pointer_noarg)
            << DS.getSourceRange();
+
+    // Types other than those of a pointed-to object or pointed-to incomplete
+    // type shall not be _Optional-qualified in a declaration.
+    if (TypeQuals & DeclSpec::TQ_optional)
+      Diag(DS.getOptionalSpecLoc(),
+           diag::err_typecheck_invalid_optional_not_pointee_noarg)
+          << DS.getSourceRange();
   }
 
   if (DS.isInlineSpecified())
