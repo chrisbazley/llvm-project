@@ -26,12 +26,13 @@
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 
+#include "clang/Analysis/AnyCall.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
@@ -78,10 +79,11 @@ enum class ErrorKind : int {
 };
 
 class NullabilityChecker
-    : public Checker<check::Bind, check::PreCall, check::PreStmt<ReturnStmt>,
-                     check::PostCall, check::PostStmt<ExplicitCastExpr>,
-                     check::PostObjCMessage, check::DeadSymbols, eval::Assume,
-                     check::Location, check::Event<ImplicitNullDerefEvent>> {
+    : public Checker<check::Bind, check::BeginFunction, check::PreCall,
+                     check::PreStmt<ReturnStmt>, check::PostCall,
+                     check::PostStmt<ExplicitCastExpr>, check::PostObjCMessage,
+                     check::DeadSymbols, eval::Assume, check::Location,
+                     check::Event<ImplicitNullDerefEvent>> {
 
 public:
   // If true, the checker will not diagnose nullabilility issues for calls
@@ -104,6 +106,7 @@ public:
                      CheckerContext &C) const;
   ProgramStateRef evalAssume(ProgramStateRef State, SVal Cond,
                              bool Assumption) const;
+  void checkBeginFunction(CheckerContext &C) const;
 
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
@@ -1342,6 +1345,59 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
     I->second.print(Out);
     Out << NL;
   }
+}
+
+/// We want to trust developer annotations and consider all 'nullable'
+/// parameters as potentially null. Each marked parameter will get a
+/// corresponding constraint.
+///
+/// \code
+///   void foo(int *_Nullable x) {
+///     // . . .
+///     *x = 42;    // we want to consider this as an error...
+///     // . . .
+///   }
+/// \endcode
+void NullabilityChecker::checkBeginFunction(CheckerContext &Context) const {
+  // Planned assumption makes sense only for top-level functions.
+  if (!Context.inTopFrame())
+    return;
+
+  const LocationContext *LocContext = Context.getLocationContext();
+
+  const Decl *FD = LocContext->getDecl();
+  // AnyCall helps us here to avoid checking for FunctionDecl and ObjCMethodDecl
+  // separately and aggregates interfaces of these classes.
+  auto AbstractCall = AnyCall::forDecl(FD);
+  if (!AbstractCall)
+    return;
+
+  ProgramStateRef State = Context.getState();
+
+  for (const ParmVarDecl *Parameter : AbstractCall->parameters()) {
+    Nullability RequiredNullability =
+        getNullabilityAnnotation(Parameter->getType());
+
+    if (RequiredNullability != Nullability::Nullable)
+      continue;
+
+    Loc ParameterLoc = State->getLValue(Parameter, LocContext);
+    // We never consider top-level function parameters undefined.
+    auto StoredVal =
+        State->getSVal(ParameterLoc).castAs<DefinedOrUnknownSVal>();
+
+    const MemRegion *Region = getTrackRegion(StoredVal);
+    if (!Region)
+      continue;
+
+    const Stmt *NullabilitySource = Parameter->getBody();
+    if (ProgramStateRef NewState = State->set<NullabilityMap>(
+            Region, NullabilityState(RequiredNullability, NullabilitySource))) {
+      State = NewState;
+    }
+  }
+
+  Context.addTransition(State);
 }
 
 void ento::registerNullabilityBase(CheckerManager &mgr) {
