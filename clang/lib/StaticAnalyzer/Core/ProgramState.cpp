@@ -386,8 +386,24 @@ ConditionTruthVal ProgramState::isNull(SVal V) const {
     return false;
 
   SymbolRef Sym = V.getAsSymbol(/* IncludeBaseRegion */ true);
-  if (!Sym)
+  if (!Sym) {
+    if (Optional<Loc> LV = V.getAs<Loc>()) {
+      SValBuilder &SVB = stateMgr->getSValBuilder();
+      QualType T;
+      const MemRegion *MR = LV->getAsRegion();
+      if (const TypedRegion *TR = dyn_cast_or_null<TypedRegion>(MR))
+        T = TR->getLocationType();
+      else
+        T = SVB.getContext().VoidPtrTy;
+
+      V = SVB.evalCast(*LV, SVB.getContext().BoolTy, T);
+      auto const integer = V.getAsInteger();
+      if (integer) {
+        return integer->isZero();
+      }
+    }
     return ConditionTruthVal();
+  }
 
   return getStateManager().ConstraintMgr->isNull(this, Sym);
 }
