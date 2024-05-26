@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 \
-// RUN: -S -disable-O0-optnone \
+// RUN: -disable-O0-optnone \
 // RUN: -emit-llvm -o - %s | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,UNCONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 \
-// RUN: -S -disable-O0-optnone \
+// RUN: -disable-O0-optnone \
 // RUN: -ffp-exception-behavior=strict -emit-llvm -o - %s | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,CONSTRAINED %s
 
@@ -290,8 +290,7 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 }
 
 // COMMON-LABEL: test_vfmsh_f16
-// UNCONSTRAINED:  [[SUB:%.*]] = fsub half 0xH8000, %b
-// CONSTRAINED:    [[SUB:%.*]] = call half @llvm.experimental.constrained.fsub.f16(half 0xH8000, half %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// COMMONIR:  [[SUB:%.*]] = fneg half %b
 // UNCONSTRAINED:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half %c, half %a)
 // CONSTRAINED:    [[ADD:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[SUB]], half %c, half %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // COMMONIR:       ret half [[ADD]]

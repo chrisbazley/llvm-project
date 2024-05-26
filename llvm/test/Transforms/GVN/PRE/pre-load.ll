@@ -1004,3 +1004,99 @@ if.end:
   store i16 %v2, ptr %p2
   ret void
 }
+
+; Call to function @maybethrow may cause exception, so the load of %v3 can't
+; be hoisted to block %if.else.
+define void @test22(i1 %cond, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @test22(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    [[DEC:%.*]] = add i64 [[V1]], -1
+; CHECK-NEXT:    store i64 [[DEC]], ptr [[P1]], align 8
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[V2:%.*]] = phi i64 [ [[V2_PRE:%.*]], [[IF_ELSE_IF_END_CRIT_EDGE:%.*]] ], [ [[DEC]], [[IF_THEN]] ]
+; CHECK-NEXT:    store i64 [[V2]], ptr [[P2:%.*]], align 8
+; CHECK-NEXT:    ret void
+; CHECK:       if.else:
+; CHECK-NEXT:    [[COND2:%.*]] = call i1 @foo()
+; CHECK-NEXT:    br i1 [[COND2]], label [[IF_ELSE_IF_END_CRIT_EDGE]], label [[EXIT:%.*]]
+; CHECK:       if.else.if.end_crit_edge:
+; CHECK-NEXT:    [[V2_PRE]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[_:%.*]] = call i1 @maybethrow()
+; CHECK-NEXT:    [[V3:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V3]], ptr [[P2]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %v1 = load i64, ptr %p1
+  %dec = add i64 %v1, -1
+  store i64 %dec, ptr %p1
+  br label %if.end
+
+if.end:
+  %v2 = load i64, ptr %p1
+  store i64 %v2, ptr %p2
+  ret void
+
+if.else:
+  %cond2 = call i1 @foo()
+  br i1 %cond2, label %if.end, label %exit
+
+exit:
+  %_ = call i1 @maybethrow()
+  %v3 = load i64, ptr %p1
+  store i64 %v3, ptr %p2
+  ret void
+}
+
+declare void @maybethrow() readnone
+@B = external global i64, align 8
+
+; When BB in ValuesPerBlock(BB, OldLoad) is not OldLoad->getParent(), it should
+; also be replaced by ValuesPerBlock(BB, NewLoad). So we'll not use the deleted
+; OldLoad in later PHI instruction.
+define void @test23(i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @test23(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[G:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    [[VAL1_PRE:%.*]] = load i64, ptr @B, align 8
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[THEN:%.*]], label [[WRONG:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[STORE:%.*]], label [[EXIT:%.*]]
+; CHECK:       store:
+; CHECK-NEXT:    store i64 [[VAL1_PRE]], ptr @B, align 8
+; CHECK-NEXT:    br label [[WRONG]]
+; CHECK:       wrong:
+; CHECK-NEXT:    store i64 [[VAL1_PRE]], ptr [[G]], align 8
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %G = alloca i64, align 8
+  br i1 %cond2, label %then, label %wrong
+
+then:
+  %val2 = load i64, ptr @B, align 8
+  br i1 %cond1, label %store, label %exit
+
+store:
+  store i64 %val2, ptr @B, align 8
+  br label %wrong
+
+wrong:
+  %val1 = load i64, ptr @B, align 8
+  store i64 %val1, ptr %G, align 8
+  ret void
+
+exit:
+  ret void
+}

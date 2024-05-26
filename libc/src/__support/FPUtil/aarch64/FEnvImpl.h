@@ -6,23 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
 
-#include "src/__support/architectures.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/properties/architectures.h"
 
-#if !defined(LLVM_LIBC_ARCH_AARCH64) || defined(__APPLE__)
+#if !defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(__APPLE__)
 #error "Invalid include"
 #endif
 
 #include <arm_acle.h>
-#include <fenv.h>
 #include <stdint.h>
 
+#include "hdr/fenv_macros.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 struct FEnv {
@@ -52,28 +53,54 @@ struct FEnv {
   static constexpr uint32_t ExceptionControlFlagsBitPosition = 8;
 
   LIBC_INLINE static uint32_t getStatusValueForExcept(int excepts) {
-    return (excepts & FE_INVALID ? INVALID : 0) |
-           (excepts & FE_DIVBYZERO ? DIVBYZERO : 0) |
-           (excepts & FE_OVERFLOW ? OVERFLOW : 0) |
-           (excepts & FE_UNDERFLOW ? UNDERFLOW : 0) |
-           (excepts & FE_INEXACT ? INEXACT : 0);
+    return ((excepts & FE_INVALID) ? INVALID : 0) |
+           ((excepts & FE_DIVBYZERO) ? DIVBYZERO : 0) |
+           ((excepts & FE_OVERFLOW) ? OVERFLOW : 0) |
+           ((excepts & FE_UNDERFLOW) ? UNDERFLOW : 0) |
+           ((excepts & FE_INEXACT) ? INEXACT : 0);
   }
 
   LIBC_INLINE static int exceptionStatusToMacro(uint32_t status) {
-    return (status & INVALID ? FE_INVALID : 0) |
-           (status & DIVBYZERO ? FE_DIVBYZERO : 0) |
-           (status & OVERFLOW ? FE_OVERFLOW : 0) |
-           (status & UNDERFLOW ? FE_UNDERFLOW : 0) |
-           (status & INEXACT ? FE_INEXACT : 0);
+    return ((status & INVALID) ? FE_INVALID : 0) |
+           ((status & DIVBYZERO) ? FE_DIVBYZERO : 0) |
+           ((status & OVERFLOW) ? FE_OVERFLOW : 0) |
+           ((status & UNDERFLOW) ? FE_UNDERFLOW : 0) |
+           ((status & INEXACT) ? FE_INEXACT : 0);
   }
 
-  static uint32_t getControlWord() { return __arm_rsr("fpcr"); }
+  static uint32_t getControlWord() {
+#ifdef __clang__
+    // GCC does not currently support __arm_rsr.
+    return __arm_rsr("fpcr");
+#else
+    return __builtin_aarch64_get_fpcr();
+#endif
+  }
 
-  static void writeControlWord(uint32_t fpcr) { __arm_wsr("fpcr", fpcr); }
+  static void writeControlWord(uint32_t fpcr) {
+#ifdef __clang__
+    // GCC does not currently support __arm_wsr.
+    __arm_wsr("fpcr", fpcr);
+#else
+    __builtin_aarch64_set_fpcr(fpcr);
+#endif
+  }
 
-  static uint32_t getStatusWord() { return __arm_rsr("fpsr"); }
+  static uint32_t getStatusWord() {
+#ifdef __clang__
+    return __arm_rsr("fpsr");
+#else
+    return __builtin_aarch64_get_fpsr();
+#endif
+  }
 
-  static void writeStatusWord(uint32_t fpsr) { __arm_wsr("fpsr", fpsr); }
+  static void writeStatusWord(uint32_t fpsr) {
+#ifdef __clang__
+    __arm_wsr("fpsr", fpsr);
+#else
+    __builtin_aarch64_set_fpsr(fpsr);
+#endif
+  }
 };
 
 LIBC_INLINE int enable_except(int excepts) {
@@ -129,8 +156,8 @@ LIBC_INLINE int set_except(int excepts) {
 LIBC_INLINE int raise_except(int excepts) {
   float zero = 0.0f;
   float one = 1.0f;
-  float largeValue = float(FPBits<float>(FPBits<float>::MAX_NORMAL));
-  float smallValue = float(FPBits<float>(FPBits<float>::MIN_NORMAL));
+  float largeValue = FPBits<float>::max_normal().get_val();
+  float smallValue = FPBits<float>::min_normal().get_val();
   auto divfunc = [](float a, float b) {
     __asm__ __volatile__("ldr  s0, %0\n\t"
                          "ldr  s1, %1\n\t"
@@ -252,6 +279,6 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENVIMPL_H

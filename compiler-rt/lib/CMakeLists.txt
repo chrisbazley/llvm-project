@@ -17,10 +17,6 @@ if(COMPILER_RT_BUILD_BUILTINS)
   add_subdirectory(builtins)
 endif()
 
-if(COMPILER_RT_BUILD_CRT)
-  add_subdirectory(crt)
-endif()
-
 function(compiler_rt_build_runtime runtime)
   string(TOUPPER ${runtime} runtime_uppercase)
   if(COMPILER_RT_HAS_${runtime_uppercase})
@@ -53,6 +49,10 @@ endif()
 
 if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
   compiler_rt_build_runtime(profile)
+endif()
+
+if(COMPILER_RT_BUILD_CTX_PROFILE AND COMPILER_RT_HAS_CTX_PROFILE)
+  compiler_rt_build_runtime(ctx_profile)
 endif()
 
 if(COMPILER_RT_BUILD_XRAY)

@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMInstrumentation
   ControlHeightReduction.cpp
   DataFlowSanitizer.cpp
   GCOVProfiling.cpp
+  BlockCoverageInference.cpp
   MemProfiler.cpp
   MemorySanitizer.cpp
   IndirectCallPromotion.cpp
@@ -12,6 +13,9 @@ add_llvm_component_library(LLVMInstrumentation
   InstrOrderFile.cpp
   InstrProfiling.cpp
   KCFI.cpp
+  LowerAllowCheckPass.cpp
+  PGOCtxProfLowering.cpp
+  PGOForceFunctionAttrs.cpp
   PGOInstrumentation.cpp
   PGOMemOPSizeOpt.cpp
   PoisonChecking.cpp

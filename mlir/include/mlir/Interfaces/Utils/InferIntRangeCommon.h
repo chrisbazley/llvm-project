@@ -16,6 +16,8 @@
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
+#include <optional>
 
 namespace mlir {
 namespace intrange {
@@ -29,6 +31,18 @@ static constexpr unsigned indexMinWidth = 32;
 static constexpr unsigned indexMaxWidth = 64;
 
 enum class CmpMode : uint32_t { Both, Signed, Unsigned };
+
+enum class OverflowFlags : uint32_t {
+  None = 0,
+  Nsw = 1,
+  Nuw = 2,
+  LLVM_MARK_AS_BITMASK_ENUM(Nuw)
+};
+
+/// Function that performs inference on an array of `ConstantIntRanges` while
+/// taking special overflow behavior into account.
+using InferRangeWithOvfFlagsFn =
+    function_ref<ConstantIntRanges(ArrayRef<ConstantIntRanges>, OverflowFlags)>;
 
 /// Compute `inferFn` on `ranges`, whose size should be the index storage
 /// bitwidth. Then, compute the function on `argRanges` again after truncating
@@ -59,11 +73,14 @@ ConstantIntRanges extSIRange(const ConstantIntRanges &range,
 ConstantIntRanges truncRange(const ConstantIntRanges &range,
                              unsigned destWidth);
 
-ConstantIntRanges inferAdd(ArrayRef<ConstantIntRanges> argRanges);
+ConstantIntRanges inferAdd(ArrayRef<ConstantIntRanges> argRanges,
+                           OverflowFlags ovfFlags = OverflowFlags::None);
 
-ConstantIntRanges inferSub(ArrayRef<ConstantIntRanges> argRanges);
+ConstantIntRanges inferSub(ArrayRef<ConstantIntRanges> argRanges,
+                           OverflowFlags ovfFlags = OverflowFlags::None);
 
-ConstantIntRanges inferMul(ArrayRef<ConstantIntRanges> argRanges);
+ConstantIntRanges inferMul(ArrayRef<ConstantIntRanges> argRanges,
+                           OverflowFlags ovfFlags = OverflowFlags::None);
 
 ConstantIntRanges inferDivS(ArrayRef<ConstantIntRanges> argRanges);
 
@@ -93,7 +110,8 @@ ConstantIntRanges inferOr(ArrayRef<ConstantIntRanges> argRanges);
 
 ConstantIntRanges inferXor(ArrayRef<ConstantIntRanges> argRanges);
 
-ConstantIntRanges inferShl(ArrayRef<ConstantIntRanges> argRanges);
+ConstantIntRanges inferShl(ArrayRef<ConstantIntRanges> argRanges,
+                           OverflowFlags ovfFlags = OverflowFlags::None);
 
 ConstantIntRanges inferShrS(ArrayRef<ConstantIntRanges> argRanges);
 
@@ -117,8 +135,9 @@ enum class CmpPredicate : uint64_t {
 /// Returns a boolean value if `pred` is statically true or false for
 /// anypossible inputs falling within `lhs` and `rhs`, and std::nullopt if the
 /// value of the predicate cannot be determined.
-Optional<bool> evaluatePred(CmpPredicate pred, const ConstantIntRanges &lhs,
-                            const ConstantIntRanges &rhs);
+std::optional<bool> evaluatePred(CmpPredicate pred,
+                                 const ConstantIntRanges &lhs,
+                                 const ConstantIntRanges &rhs);
 
 } // namespace intrange
 } // namespace mlir

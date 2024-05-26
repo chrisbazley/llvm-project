@@ -6,9 +6,9 @@ define i8 @range_from_lshr(i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SHR:%.*]] = lshr i8 [[A:%.*]], 1
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A_SHR]], 1
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[A_SHR]], -128
-; CHECK-NEXT:    [[ADD_3:%.*]] = add i8 [[A_SHR]], -127
-; CHECK-NEXT:    [[ADD_4:%.*]] = add i8 [[A_SHR]], -1
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[A_SHR]], -128
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i8 [[A_SHR]], -127
+; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i8 [[A_SHR]], -1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i8 [[ADD_1]], [[ADD_2]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i8 [[RES_1]], [[ADD_3]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i8 [[RES_2]], [[ADD_4]]
@@ -30,7 +30,7 @@ define i8 @a_and_15_add_1(i8 %a) {
 ; CHECK-LABEL: @a_and_15_add_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_AND:%.*]] = and i8 [[A:%.*]], 15
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A_AND]], 1
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[A_AND]], 1
 ; CHECK-NEXT:    ret i8 [[ADD_1]]
 ;
 entry:
@@ -73,10 +73,10 @@ define i8 @sge_0_and_sle_90(i8 %a) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[SGT]], [[SLT]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], 1
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i8 [[A]], -1
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[A]], -91
-; CHECK-NEXT:    [[ADD_4:%.*]] = add i8 [[A]], -90
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[A]], 1
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i8 [[A]], -1
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw nsw i8 [[A]], -91
+; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i8 [[A]], -90
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i8 [[ADD_1]], [[ADD_2]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i8 [[RES_1]], [[ADD_3]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i8 [[RES_2]], [[ADD_4]]
@@ -124,7 +124,7 @@ define i16 @sge_with_sext_to_zext_conversion(i8 %a)  {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[SEXT:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[SEXT:%.*]] = zext nneg i8 [[A]] to i16
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i16 [[SEXT]], 1
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i16 [[SEXT]], -128
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add i16 [[SEXT]], -127
@@ -133,9 +133,9 @@ define i16 @sge_with_sext_to_zext_conversion(i8 %a)  {
 ; CHECK-NEXT:    ret i16 [[RES_2]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[SEXT_2:%.*]] = sext i8 [[A]] to i16
-; CHECK-NEXT:    [[ADD_4:%.*]] = add i16 [[SEXT_2]], 1
-; CHECK-NEXT:    [[ADD_5:%.*]] = add i16 [[SEXT_2]], -128
-; CHECK-NEXT:    [[ADD_6:%.*]] = add i16 [[SEXT_2]], -127
+; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i16 [[SEXT_2]], 1
+; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i16 [[SEXT_2]], -128
+; CHECK-NEXT:    [[ADD_6:%.*]] = add nsw i16 [[SEXT_2]], -127
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i16 [[ADD_4]], [[ADD_5]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i16 [[RES_3]], [[ADD_6]]
 ; CHECK-NEXT:    ret i16 [[RES_4]]
@@ -219,7 +219,7 @@ define i16 @test_add_in_different_block(i1 %c, i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], 0
 ; CHECK-NEXT:    [[COND4:%.*]] = select i1 [[CMP]], i8 1, i8 0
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[COND4]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[COND4]] to i16
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 1, [[CONV]]
@@ -239,4 +239,33 @@ then:
 
 else:
   ret i16 0
+}
+
+define i1 @test_add_nuw_sub(i32 %a) {
+; CHECK-LABEL: @test_add_nuw_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A:%.*]], 10000
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[ADD]], -5000
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %add = add nuw i32 %a, 10000
+  %sub = add i32 %add, -5000
+  %cond = icmp ult i32 %sub, 5000
+  ret i1 %cond
+}
+
+define i1 @test_add_nsw_sub(i32 %a) {
+; CHECK-LABEL: @test_add_nsw_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A:%.*]], 10000
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ADD]], -5000
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[SUB]], 5000
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %add = add nsw i32 %a, 10000
+  %sub = add i32 %add, -5000
+  %cond = icmp ult i32 %sub, 5000
+  ret i1 %cond
 }

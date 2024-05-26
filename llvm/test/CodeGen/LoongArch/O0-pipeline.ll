@@ -1,8 +1,8 @@
 ;; When EXPENSIVE_CHECKS are enabled, the machine verifier appears between each
 ;; pass. Ignore it with 'grep -v'.
-; RUN: llc --mtriple=loongarch32 -O0 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch32 -mattr=+d -O0 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s
-; RUN: llc --mtriple=loongarch64 -O0 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch64 -mattr=+d -O0 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s
 
 ; REQUIRES: asserts
@@ -31,6 +31,7 @@
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Exception handling preparation
+; CHECK-NEXT:       Prepare callbr
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
@@ -68,6 +69,7 @@
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Stack Frame Layout Analysis
+; CHECK-NEXT:       LoongArch pseudo instruction expansion pass
 ; CHECK-NEXT:       LoongArch atomic pseudo instruction expansion pass
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter

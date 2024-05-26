@@ -8,12 +8,14 @@
 
 #include "llvm/Support/JSON.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/NativeFormatting.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cctype>
+#include <cerrno>
 #include <optional>
 
 namespace llvm {
@@ -334,7 +336,7 @@ void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
       JOS.object([&] {
         for (const auto *KV : sortedElements(*O)) {
           JOS.attributeBegin(KV->first);
-          if (FieldName.equals(KV->first))
+          if (FieldName == StringRef(KV->first))
             Recurse(KV->second, Path.drop_back(), Recurse);
           else
             abbreviate(KV->second, JOS);

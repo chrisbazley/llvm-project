@@ -123,10 +123,12 @@ UnusedParametersCheck::~UnusedParametersCheck() = default;
 UnusedParametersCheck::UnusedParametersCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)) {}
+      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      IgnoreVirtual(Options.get("IgnoreVirtual", false)) {}
 
 void UnusedParametersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "IgnoreVirtual", IgnoreVirtual);
 }
 
 void UnusedParametersCheck::warnOnUnusedParameter(
@@ -176,9 +178,12 @@ void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("function");
   if (!Function->hasWrittenPrototype() || Function->isTemplateInstantiation())
     return;
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(Function))
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(Function)) {
+    if (IgnoreVirtual && Method->isVirtual())
+      return;
     if (Method->isLambdaStaticInvoker())
       return;
+  }
   for (unsigned I = 0, E = Function->getNumParams(); I != E; ++I) {
     const auto *Param = Function->getParamDecl(I);
     if (Param->isUsed() || Param->isReferenced() || !Param->getDeclName() ||
@@ -187,9 +192,7 @@ void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {
 
     // In non-strict mode ignore function definitions with empty bodies
     // (constructor initializer counts for non-empty body).
-    if (StrictMode ||
-        (Function->getBody()->child_begin() !=
-         Function->getBody()->child_end()) ||
+    if (StrictMode || !Function->getBody()->children().empty() ||
         (isa<CXXConstructorDecl>(Function) &&
          cast<CXXConstructorDecl>(Function)->getNumCtorInitializers() > 0))
       warnOnUnusedParameter(Result, Function, I);

@@ -74,10 +74,7 @@ void ModuloScheduleExpander::expand() {
   // stage difference for each use.  Keep the maximum value.
   for (MachineInstr *MI : Schedule.getInstructions()) {
     int DefStage = Schedule.getStage(MI);
-    for (const MachineOperand &Op : MI->operands()) {
-      if (!Op.isReg() || !Op.isDef())
-        continue;
-
+    for (const MachineOperand &Op : MI->all_defs()) {
       Register Reg = Op.getReg();
       unsigned MaxDiff = 0;
       bool PhiIsSwapped = false;
@@ -743,9 +740,7 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
         continue;
       }
       bool used = true;
-      for (const MachineOperand &MO : MI->operands()) {
-        if (!MO.isReg() || !MO.isDef())
-          continue;
+      for (const MachineOperand &MO : MI->all_defs()) {
         Register reg = MO.getReg();
         // Assume physical registers are used, unless they are marked dead.
         if (reg.isPhysical()) {
@@ -819,7 +814,7 @@ void ModuloScheduleExpander::splitLifetimes(MachineBasicBlock *KernelBB,
         unsigned SplitReg = 0;
         for (auto &BBJ : make_range(MachineBasicBlock::instr_iterator(MI),
                                     KernelBB->instr_end()))
-          if (BBJ.readsRegister(Def)) {
+          if (BBJ.readsRegister(Def, /*TRI=*/nullptr)) {
             // We split the lifetime when we find the first use.
             if (SplitReg == 0) {
               SplitReg = MRI.createVirtualRegister(MRI.getRegClass(Def));
@@ -834,7 +829,7 @@ void ModuloScheduleExpander::splitLifetimes(MachineBasicBlock *KernelBB,
         // Search through each of the epilog blocks for any uses to be renamed.
         for (auto &Epilog : EpilogBBs)
           for (auto &I : *Epilog)
-            if (I.readsRegister(Def))
+            if (I.readsRegister(Def, /*TRI=*/nullptr))
               I.substituteRegister(Def, SplitReg, 0, *TRI);
         break;
       }
@@ -984,8 +979,8 @@ void ModuloScheduleExpander::updateMemOperands(MachineInstr &NewMI,
       NewMMOs.push_back(
           MF.getMachineMemOperand(MMO, AdjOffset, MMO->getSize()));
     } else {
-      NewMMOs.push_back(
-          MF.getMachineMemOperand(MMO, 0, MemoryLocation::UnknownSize));
+      NewMMOs.push_back(MF.getMachineMemOperand(
+          MMO, 0, LocationSize::beforeOrAfterPointer()));
     }
   }
   NewMI.setMemRefs(MF, NewMMOs);
@@ -1678,7 +1673,8 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
     // we don't need the phi anymore.
     if (getStage(Def) == Stage) {
       Register PhiReg = MI.getOperand(0).getReg();
-      assert(Def->findRegisterDefOperandIdx(MI.getOperand(1).getReg()) != -1);
+      assert(Def->findRegisterDefOperandIdx(MI.getOperand(1).getReg(),
+                                            /*TRI=*/nullptr) != -1);
       MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
       MI.getOperand(0).setReg(PhiReg);
       PhiToDelete.push_back(&MI);
@@ -1904,7 +1900,7 @@ Register
 PeelingModuloScheduleExpander::getEquivalentRegisterIn(Register Reg,
                                                        MachineBasicBlock *BB) {
   MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
-  unsigned OpIdx = MI->findRegisterDefOperandIdx(Reg);
+  unsigned OpIdx = MI->findRegisterDefOperandIdx(Reg, /*TRI=*/nullptr);
   return BlockMIs[{BB, CanonicalMIs[MI]}]->getOperand(OpIdx).getReg();
 }
 

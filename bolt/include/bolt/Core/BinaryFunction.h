@@ -27,6 +27,7 @@
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryDomTree.h"
 #include "bolt/Core/BinaryLoop.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
@@ -51,7 +52,6 @@
 #include <iterator>
 #include <limits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -73,6 +73,14 @@ enum IndirectCallPromotionType : char {
   ICP_CALLS,       /// Perform ICP on indirect calls.
   ICP_JUMP_TABLES, /// Perform ICP on jump tables.
   ICP_ALL          /// Perform ICP on calls and jump tables.
+};
+
+/// Hash functions supported for BF/BB hashing.
+enum class HashFunction : char {
+  StdHash, /// std::hash, implementation is platform-dependent. Provided for
+           /// backwards compatibility.
+  XXH3,    /// llvm::xxh3_64bits, the default.
+  Default = XXH3,
 };
 
 /// Information on a single indirect call to a particular callee.
@@ -167,6 +175,10 @@ public:
     /// List of relocations associated with data in the constant island
     std::map<uint64_t, Relocation> Relocations;
 
+    /// Set true if constant island contains dynamic relocations, which may
+    /// happen if binary is linked with -z notext option.
+    bool HasDynamicRelocations{false};
+
     /// Offsets in function that are data values in a constant island identified
     /// after disassembling
     std::map<uint64_t, MCSymbol *> Offsets;
@@ -187,9 +199,6 @@ public:
 
   static constexpr uint64_t COUNT_NO_PROFILE =
       BinaryBasicBlock::COUNT_NO_PROFILE;
-
-  /// We have to use at least 2-byte alignment for functions because of C++ ABI.
-  static constexpr unsigned MinAlign = 2;
 
   static const char TimerGroupName[];
   static const char TimerGroupDesc[];
@@ -257,6 +266,7 @@ private:
   BinaryContext &BC;
 
   std::unique_ptr<BinaryLoopInfo> BLI;
+  std::unique_ptr<BinaryDominatorTree> BDT;
 
   /// All labels in the function that are referenced via relocations from
   /// data objects. Typically these are jump table destinations and computed
@@ -318,10 +328,6 @@ private:
   /// Execution halts whenever this function is entered.
   bool TrapsOnEntry{false};
 
-  /// True if the function had an indirect branch with a fixed internal
-  /// destination.
-  bool HasFixedIndirectBranch{false};
-
   /// True if the function is a fragment of another function. This means that
   /// this function could only be entered via its parent or one of its sibling
   /// fragments. It could be entered at any basic block. It can also return
@@ -334,6 +340,9 @@ private:
   /// Indicate that the function body has Pseudo Probe
   bool HasPseudoProbe{BC.getUniqueSectionByName(".pseudo_probe_desc") &&
                       BC.getUniqueSectionByName(".pseudo_probe")};
+
+  /// True if the function uses ORC format for stack unwinding.
+  bool HasORC{false};
 
   /// True if the original entry point was patched.
   bool IsPatched{false};
@@ -349,6 +358,9 @@ private:
   /// This attribute is only valid when hasCFG() == true.
   bool HasCanonicalCFG{true};
 
+  /// True if another function body was merged into this one.
+  bool HasFunctionsFoldedInto{false};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -356,14 +368,15 @@ private:
   std::string ColdCodeSectionName;
 
   /// Parent function fragment for split function fragments.
-  SmallPtrSet<BinaryFunction *, 1> ParentFragments;
+  using FragmentsSetTy = SmallPtrSet<BinaryFunction *, 1>;
+  FragmentsSetTy ParentFragments;
 
   /// Indicate if the function body was folded into another function.
   /// Used by ICF optimization.
   BinaryFunction *FoldedIntoFunction{nullptr};
 
   /// All fragments for a parent function.
-  SmallPtrSet<BinaryFunction *, 1> Fragments;
+  FragmentsSetTy Fragments;
 
   /// The profile data for the number of times the function was executed.
   uint64_t ExecutionCount{COUNT_NO_PROFILE};
@@ -371,11 +384,15 @@ private:
   /// Profile match ratio.
   float ProfileMatchRatio{0.0f};
 
-  /// Raw branch count for this function in the profile
+  /// Raw branch count for this function in the profile.
   uint64_t RawBranchCount{0};
 
   /// Indicates the type of profile the function is using.
   uint16_t ProfileFlags{PF_NONE};
+
+  /// True if the function's input profile data has been inaccurate but has
+  /// been adjusted by the profile inference algorithm.
+  bool HasInferredProfile{false};
 
   /// For functions with mismatched profile we store all call profile
   /// information at a function level (as opposed to tying it to
@@ -410,21 +427,6 @@ private:
   unsigned getIndex(const BinaryBasicBlock *BB) const {
     assert(BB->getIndex() < BasicBlocks.size());
     return BB->getIndex();
-  }
-
-  /// Return basic block that originally contained offset \p Offset
-  /// from the function start.
-  BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset);
-
-  const BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset) const {
-    return const_cast<BinaryFunction *>(this)->getBasicBlockContainingOffset(
-        Offset);
-  }
-
-  /// Return basic block that started at offset \p Offset.
-  BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) {
-    BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
-    return BB && BB->getOffset() == Offset ? BB : nullptr;
   }
 
   /// Release memory taken by the list.
@@ -577,9 +579,6 @@ private:
   /// Count the number of functions created.
   static uint64_t Count;
 
-  /// Map offsets of special instructions to addresses in the output.
-  InputOffsetToAddressMapTy InputOffsetToAddressMap;
-
   /// Register alternative function name.
   void addAlternativeName(std::string NewName) {
     Aliases.push_back(std::move(NewName));
@@ -607,10 +606,6 @@ private:
       Islands = std::make_unique<IslandInfo>();
     Islands->CodeOffsets.emplace(Offset);
   }
-
-  /// Register secondary entry point at a given \p Offset into the function.
-  /// Return global symbol for use by extern function references.
-  MCSymbol *addEntryPointAtOffset(uint64_t Offset);
 
   /// Register an internal offset in a function referenced from outside.
   void registerReferencedOffset(uint64_t Offset) {
@@ -844,6 +839,14 @@ public:
   /// stats.
   void calculateMacroOpFusionStats();
 
+  /// Returns if BinaryDominatorTree has been constructed for this function.
+  bool hasDomTree() const { return BDT != nullptr; }
+
+  BinaryDominatorTree &getDomTree() { return *BDT.get(); }
+
+  /// Constructs DomTree for this function.
+  void constructDomTree();
+
   /// Returns if loop detection has been run for this function.
   bool hasLoopInfo() const { return BLI != nullptr; }
 
@@ -889,6 +892,21 @@ public:
     return LabelToBB.lookup(Label);
   }
 
+  /// Return basic block that originally contained offset \p Offset
+  /// from the function start.
+  BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset);
+
+  const BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset) const {
+    return const_cast<BinaryFunction *>(this)->getBasicBlockContainingOffset(
+        Offset);
+  }
+
+  /// Return basic block that started at offset \p Offset.
+  BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) {
+    BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
+    return BB && BB->getOffset() == Offset ? BB : nullptr;
+  }
+
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
   /// that is in \p BB. Return nullptr if none exists
   BinaryBasicBlock *getLandingPadBBFor(const BinaryBasicBlock &BB,
@@ -911,6 +929,8 @@ public:
   const MCInst *getInstructionAtOffset(uint64_t Offset) const {
     return const_cast<BinaryFunction *>(this)->getInstructionAtOffset(Offset);
   }
+
+  std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
 
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could
@@ -1117,11 +1137,7 @@ public:
   /// secondary entry point into the function, then return a global symbol
   /// that represents the secondary entry point. Otherwise return nullptr.
   MCSymbol *getSecondaryEntryPointSymbol(const MCSymbol *BBLabel) const {
-    auto I = SecondaryEntryPoints.find(BBLabel);
-    if (I == SecondaryEntryPoints.end())
-      return nullptr;
-
-    return I->second;
+    return SecondaryEntryPoints.lookup(BBLabel);
   }
 
   /// If the basic block serves as a secondary entry point to the function,
@@ -1154,7 +1170,7 @@ public:
   /// Pass an offset of the entry point in the input binary and a corresponding
   /// global symbol to the callback function.
   ///
-  /// Return true of all callbacks returned true, false otherwise.
+  /// Return true if all callbacks returned true, false otherwise.
   bool forEachEntryPoint(EntryPointCallbackTy Callback) const;
 
   /// Return MC symbol associated with the end of the function.
@@ -1187,7 +1203,7 @@ public:
 
     if (!Islands->FunctionConstantIslandLabel) {
       Islands->FunctionConstantIslandLabel =
-          BC.Ctx->createNamedTempSymbol("func_const_island");
+          BC.Ctx->getOrCreateSymbol("func_const_island@" + getOneName());
     }
     return Islands->FunctionConstantIslandLabel;
   }
@@ -1197,7 +1213,7 @@ public:
 
     if (!Islands->FunctionColdConstantIslandLabel) {
       Islands->FunctionColdConstantIslandLabel =
-          BC.Ctx->createNamedTempSymbol("func_cold_const_island");
+          BC.Ctx->getOrCreateSymbol("func_cold_const_island@" + getOneName());
     }
     return Islands->FunctionColdConstantIslandLabel;
   }
@@ -1217,105 +1233,13 @@ public:
   }
 
   /// Update output values of the function based on the final \p Layout.
-  void updateOutputValues(const MCAsmLayout &Layout);
-
-  /// Return mapping of input to output addresses. Most users should call
-  /// translateInputToOutputAddress() for address translation.
-  InputOffsetToAddressMapTy &getInputOffsetToAddressMap() {
-    assert(isEmitted() && "cannot use address mapping before code emission");
-    return InputOffsetToAddressMap;
-  }
-
-  void addRelocationAArch64(uint64_t Offset, MCSymbol *Symbol, uint64_t RelType,
-                            uint64_t Addend, uint64_t Value, bool IsCI) {
-    std::map<uint64_t, Relocation> &Rels =
-        (IsCI) ? Islands->Relocations : Relocations;
-    switch (RelType) {
-    case ELF::R_AARCH64_ABS64:
-    case ELF::R_AARCH64_ABS32:
-    case ELF::R_AARCH64_ABS16:
-    case ELF::R_AARCH64_ADD_ABS_LO12_NC:
-    case ELF::R_AARCH64_ADR_GOT_PAGE:
-    case ELF::R_AARCH64_ADR_PREL_LO21:
-    case ELF::R_AARCH64_ADR_PREL_PG_HI21:
-    case ELF::R_AARCH64_ADR_PREL_PG_HI21_NC:
-    case ELF::R_AARCH64_LD64_GOT_LO12_NC:
-    case ELF::R_AARCH64_LDST8_ABS_LO12_NC:
-    case ELF::R_AARCH64_LDST16_ABS_LO12_NC:
-    case ELF::R_AARCH64_LDST32_ABS_LO12_NC:
-    case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
-    case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
-    case ELF::R_AARCH64_TLSDESC_ADD_LO12:
-    case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
-    case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
-    case ELF::R_AARCH64_TLSDESC_LD64_LO12:
-    case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-    case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-    case ELF::R_AARCH64_MOVW_UABS_G0:
-    case ELF::R_AARCH64_MOVW_UABS_G0_NC:
-    case ELF::R_AARCH64_MOVW_UABS_G1:
-    case ELF::R_AARCH64_MOVW_UABS_G1_NC:
-    case ELF::R_AARCH64_MOVW_UABS_G2:
-    case ELF::R_AARCH64_MOVW_UABS_G2_NC:
-    case ELF::R_AARCH64_MOVW_UABS_G3:
-    case ELF::R_AARCH64_PREL16:
-    case ELF::R_AARCH64_PREL32:
-    case ELF::R_AARCH64_PREL64:
-      Rels[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
-      return;
-    case ELF::R_AARCH64_CALL26:
-    case ELF::R_AARCH64_JUMP26:
-    case ELF::R_AARCH64_TSTBR14:
-    case ELF::R_AARCH64_CONDBR19:
-    case ELF::R_AARCH64_TLSDESC_CALL:
-    case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
-    case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-      return;
-    default:
-      llvm_unreachable("Unexpected AArch64 relocation type in code");
-    }
-  }
-
-  void addRelocationX86(uint64_t Offset, MCSymbol *Symbol, uint64_t RelType,
-                        uint64_t Addend, uint64_t Value) {
-    switch (RelType) {
-    case ELF::R_X86_64_8:
-    case ELF::R_X86_64_16:
-    case ELF::R_X86_64_32:
-    case ELF::R_X86_64_32S:
-    case ELF::R_X86_64_64:
-    case ELF::R_X86_64_PC8:
-    case ELF::R_X86_64_PC32:
-    case ELF::R_X86_64_PC64:
-    case ELF::R_X86_64_GOTPCRELX:
-    case ELF::R_X86_64_REX_GOTPCRELX:
-      Relocations[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
-      return;
-    case ELF::R_X86_64_PLT32:
-    case ELF::R_X86_64_GOTPCREL:
-    case ELF::R_X86_64_TPOFF32:
-    case ELF::R_X86_64_GOTTPOFF:
-      return;
-    default:
-      llvm_unreachable("Unexpected x86 relocation type in code");
-    }
-  }
+  void updateOutputValues(const BOLTLinker &Linker);
 
   /// Register relocation type \p RelType at a given \p Address in the function
   /// against \p Symbol.
   /// Assert if the \p Address is not inside this function.
   void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t RelType,
-                     uint64_t Addend, uint64_t Value) {
-    assert(Address >= getAddress() && Address < getAddress() + getMaxSize() &&
-           "address is outside of the function");
-    uint64_t Offset = Address - getAddress();
-    if (BC.isAArch64()) {
-      return addRelocationAArch64(Offset, Symbol, RelType, Addend, Value,
-                                  isInConstantIsland(Address));
-    }
-
-    return addRelocationX86(Offset, Symbol, RelType, Addend, Value);
-  }
+                     uint64_t Addend, uint64_t Value);
 
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {
@@ -1331,6 +1255,8 @@ public:
       return SmallString<32>(CodeSectionName);
     if (Fragment == FragmentNum::cold())
       return SmallString<32>(ColdCodeSectionName);
+    if (BC.HasWarmSection && Fragment == FragmentNum::warm())
+      return SmallString<32>(BC.getWarmCodeSectionName());
     return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
   }
 
@@ -1407,6 +1333,9 @@ public:
   /// Return true if the body of the function was merged into another function.
   bool isFolded() const { return FoldedIntoFunction != nullptr; }
 
+  /// Return true if other functions were folded into this one.
+  bool hasFunctionsFoldedInto() const { return HasFunctionsFoldedInto; }
+
   /// If this function was folded, return the function it was folded into.
   BinaryFunction *getFoldedIntoFunction() const { return FoldedIntoFunction; }
 
@@ -1418,6 +1347,9 @@ public:
 
   /// Return true if the function has Pseudo Probe
   bool hasPseudoProbe() const { return HasPseudoProbe; }
+
+  /// Return true if the function uses ORC format for stack unwinding.
+  bool hasORC() const { return HasORC; }
 
   /// Return true if the original entry point was patched.
   bool isPatched() const { return IsPatched; }
@@ -1460,8 +1392,6 @@ public:
 
   ArrayRef<uint8_t> getLSDATypeIndexTable() const { return LSDATypeIndexTable; }
 
-  const LabelsMapType &getLabels() const { return Labels; }
-
   IslandInfo &getIslandInfo() {
     assert(Islands && "function expected to have constant islands");
     return *Islands;
@@ -1474,7 +1404,8 @@ public:
 
   /// Return true if the function has CFI instructions
   bool hasCFI() const {
-    return !FrameInstructions.empty() || !CIEFrameInstructions.empty();
+    return !FrameInstructions.empty() || !CIEFrameInstructions.empty() ||
+           IsInjected;
   }
 
   /// Return unique number associated with the function.
@@ -1522,13 +1453,18 @@ public:
   /// symbol associated with the entry.
   MCSymbol *addEntryPoint(const BinaryBasicBlock &BB);
 
+  /// Register secondary entry point at a given \p Offset into the function.
+  /// Return global symbol for use by extern function references.
+  MCSymbol *addEntryPointAtOffset(uint64_t Offset);
+
   /// Mark all blocks that are unreachable from a root (entry point
   /// or landing pad) as invalid.
   void markUnreachableBlocks();
 
   /// Rebuilds BBs layout, ignoring dead BBs. Returns the number of removed
   /// BBs and the removed number of bytes of code.
-  std::pair<unsigned, uint64_t> eraseInvalidBBs();
+  std::pair<unsigned, uint64_t>
+  eraseInvalidBBs(const MCCodeEmitter *Emitter = nullptr);
 
   /// Get the relative order between two basic blocks in the original
   /// layout.  The result is > 0 if B occurs before A and < 0 if B
@@ -1642,6 +1578,12 @@ public:
 
   /// Return flags describing a profile for this function.
   uint16_t getProfileFlags() const { return ProfileFlags; }
+
+  /// Return true if the function's input profile data has been inaccurate but
+  /// has been corrected by the profile inference algorithm.
+  bool hasInferredProfile() const { return HasInferredProfile; }
+
+  void setHasInferredProfile(bool Inferred) { HasInferredProfile = Inferred; }
 
   void addCFIInstruction(uint64_t Offset, MCCFIInstruction &&Inst) {
     assert(!Instructions.empty());
@@ -1770,6 +1712,14 @@ public:
 
   void setFolded(BinaryFunction *BF) { FoldedIntoFunction = BF; }
 
+  /// Indicate that another function body was merged with this function.
+  void setHasFunctionsFoldedInto() { HasFunctionsFoldedInto = true; }
+
+  void setHasSDTMarker(bool V) { HasSDTMarker = V; }
+
+  /// Mark the function as using ORC format for stack unwinding.
+  void setHasORC(bool V) { HasORC = V; }
+
   BinaryFunction &setPersonalityFunction(uint64_t Addr) {
     assert(!PersonalityFunction && "can't set personality function twice");
     PersonalityFunction = BC.getOrCreateGlobalSymbol(Addr, "FUNCat");
@@ -1786,8 +1736,17 @@ public:
     return *this;
   }
 
-  Align getAlign() const { return Align(Alignment); }
+  uint16_t getMinAlignment() const {
+    // Align data in code BFs minimum to CI alignment
+    if (!size() && hasIslandsInfo())
+      return getConstantIslandAlignment();
+    return BC.MIB->getMinFunctionAlignment();
+  }
+
+  Align getMinAlign() const { return Align(getMinAlignment()); }
+
   uint16_t getAlignment() const { return Alignment; }
+  Align getAlign() const { return Align(getAlignment()); }
 
   BinaryFunction &setMaxAlignmentBytes(uint16_t MaxAlignBytes) {
     MaxAlignmentBytes = MaxAlignBytes;
@@ -1826,9 +1785,28 @@ public:
   /// Return true if the function is a secondary fragment of another function.
   bool isFragment() const { return IsFragment; }
 
-  /// Returns if the given function is a parent fragment of this function.
-  bool isParentFragment(BinaryFunction *Parent) const {
-    return ParentFragments.count(Parent);
+  /// Returns if this function is a child of \p Other function.
+  bool isChildOf(const BinaryFunction &Other) const {
+    return ParentFragments.contains(&Other);
+  }
+
+  /// Returns if this function is a parent of \p Other function.
+  bool isParentOf(const BinaryFunction &Other) const {
+    return Fragments.contains(&Other);
+  }
+
+  /// Return the child fragment form parent function
+  iterator_range<FragmentsSetTy::const_iterator> getFragments() const {
+    return iterator_range<FragmentsSetTy::const_iterator>(Fragments.begin(),
+                                                          Fragments.end());
+  }
+
+  /// Return the parent function for split function fragments.
+  FragmentsSetTy *getParentFragments() { return &ParentFragments; }
+
+  /// Returns if this function is a parent or child of \p Other function.
+  bool isParentOrChildOf(const BinaryFunction &Other) const {
+    return isChildOf(Other) || isParentOf(Other);
   }
 
   /// Set the profile data for the number of times the function was called.
@@ -1867,6 +1845,10 @@ public:
   /// Return the raw profile information about the number of branch
   /// executions corresponding to this function.
   uint64_t getRawBranchCount() const { return RawBranchCount; }
+
+  /// Set the profile data about the number of branch executions corresponding
+  /// to this function.
+  void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
 
   /// Return the execution count for functions with known profile.
   /// Return 0 if the function has no profile.
@@ -1936,6 +1918,28 @@ public:
       Islands->Symbols.insert(Symbol);
     }
     return Symbol;
+  }
+
+  /// Support dynamic relocations in constant islands, which may happen if
+  /// binary is linked with -z notext option.
+  Error markIslandDynamicRelocationAtAddress(uint64_t Address) {
+    if (!isInConstantIsland(Address))
+      return createFatalBOLTError(
+          Twine("dynamic relocation found for text section at 0x") +
+          Twine::utohexstr(Address) + Twine("\n"));
+
+    // Mark island to have dynamic relocation
+    Islands->HasDynamicRelocations = true;
+
+    // Create island access, so we would emit the label and
+    // move binary data during updateOutputValues, making us emit
+    // dynamic relocation with the right offset value.
+    getOrCreateIslandAccess(Address);
+    return Error::success();
+  }
+
+  bool hasDynamicRelocationAtIsland() const {
+    return !!(Islands && Islands->HasDynamicRelocations);
   }
 
   /// Called by an external function which wishes to emit references to constant
@@ -2062,9 +2066,18 @@ public:
   /// state to State:Disassembled.
   ///
   /// Returns false if disassembly failed.
-  bool disassemble();
+  Error disassemble();
 
-  void handlePCRelOperand(MCInst &Instruction, uint64_t Address, uint64_t Size);
+  /// An external interface to register a branch while the function is in
+  /// disassembled state. Allows to make custom modifications to the
+  /// disassembler. E.g., a pre-CFG pass can add an instruction and register
+  /// a branch that will later be used during the CFG construction.
+  ///
+  /// Return a label at the branch destination.
+  MCSymbol *registerBranch(uint64_t Src, uint64_t Dst);
+
+  Error handlePCRelOperand(MCInst &Instruction, uint64_t Address,
+                           uint64_t Size);
 
   MCSymbol *handleExternalReference(MCInst &Instruction, uint64_t Size,
                                     uint64_t Offset, uint64_t TargetAddress,
@@ -2078,9 +2091,11 @@ public:
   void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
 
   /// Scan function for references to other functions. In relocation mode,
-  /// add relocations for external references.
+  /// add relocations for external references. In non-relocation mode, detect
+  /// and mark new entry points.
   ///
-  /// Return true on success.
+  /// Return true on success. False if the disassembly failed or relocations
+  /// could not be created.
   bool scanExternalRefs();
 
   /// Return the size of a data object located at \p Offset in the function.
@@ -2106,7 +2121,7 @@ public:
   ///
   /// Returns true on success and update the current function state to
   /// State::CFG. Returns false if CFG cannot be built.
-  bool buildCFG(MCPlusBuilder::AllocatorIdTy);
+  Error buildCFG(MCPlusBuilder::AllocatorIdTy);
 
   /// Perform post-processing of the CFG.
   void postProcessCFG();
@@ -2185,9 +2200,14 @@ public:
   /// is corrupted. If it is unable to fix it, it returns false.
   bool finalizeCFIState();
 
-  /// Return true if this function needs an address-transaltion table after
+  /// Return true if this function needs an address-translation table after
   /// its code emission.
   bool requiresAddressTranslation() const;
+
+  /// Return true if the linker needs to generate an address map for this
+  /// function. Used for keeping track of the mapping from input to out
+  /// addresses of basic blocks.
+  bool requiresAddressMap() const;
 
   /// Adjust branch instructions to match the CFG.
   ///
@@ -2218,7 +2238,7 @@ public:
   }
 
   /// Process LSDA information for the function.
-  void parseLSDA(ArrayRef<uint8_t> LSDAData, uint64_t LSDAAddress);
+  Error parseLSDA(ArrayRef<uint8_t> LSDAData, uint64_t LSDAAddress);
 
   /// Update exception handling ranges for the function.
   void updateEHRanges();
@@ -2243,15 +2263,21 @@ public:
   ///
   /// If \p UseDFS is set, process basic blocks in DFS order. Otherwise, use
   /// the existing layout order.
+  /// \p HashFunction specifies which function is used for BF hashing.
   ///
   /// By default, instruction operands are ignored while calculating the hash.
   /// The caller can change this via passing \p OperandHashFunc function.
   /// The return result of this function will be mixed with internal hash.
   size_t computeHash(
-      bool UseDFS = false,
+      bool UseDFS = false, HashFunction HashFunction = HashFunction::Default,
       OperandHashFuncTy OperandHashFunc = [](const MCOperand &) {
         return std::string();
       }) const;
+
+  /// Compute hash values for each block of the function.
+  /// \p HashFunction specifies which function is used for BB hashing.
+  void
+  computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
   void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
 
@@ -2314,15 +2340,10 @@ public:
   /// removed.
   uint64_t translateInputToOutputAddress(uint64_t Address) const;
 
-  /// Take address ranges corresponding to the input binary and translate
-  /// them to address ranges in the output binary.
-  DebugAddressRangesVector translateInputToOutputRanges(
-      const DWARFAddressRangesVector &InputRanges) const;
-
-  /// Similar to translateInputToOutputRanges() but operates on location lists
-  /// and moves associated data to output location lists.
-  DebugLocationsVector
-  translateInputToOutputLocationList(const DebugLocationsVector &InputLL) const;
+  /// Translate a contiguous range of addresses in the input binary into a set
+  /// of ranges in the output binary.
+  DebugAddressRangesVector
+  translateInputToOutputRange(DebugAddressRange InRange) const;
 
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;

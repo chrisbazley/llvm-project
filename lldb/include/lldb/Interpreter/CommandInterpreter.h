@@ -22,12 +22,14 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
 #include <mutex>
 #include <optional>
 #include <stack>
+#include <unordered_map>
 
 namespace lldb_private {
 class CommandInterpreter;
@@ -254,9 +256,9 @@ public:
 
   // These two functions fill out the Broadcaster interface:
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
 
@@ -324,8 +326,9 @@ public:
                          lldb::CommandObjectSP &command_obj_sp,
                          llvm::StringRef args_string = llvm::StringRef());
 
-  // Remove a command if it is removable (python or regex command)
-  bool RemoveCommand(llvm::StringRef cmd);
+  /// Remove a command if it is removable (python or regex command). If \b force
+  /// is provided, the command is removed regardless of its removable status.
+  bool RemoveCommand(llvm::StringRef cmd, bool force = false);
 
   bool RemoveAlias(llvm::StringRef alias_name);
 
@@ -352,9 +355,10 @@ public:
                      CommandReturnObject &result);
 
   bool HandleCommand(const char *command_line, LazyBool add_to_history,
-                     CommandReturnObject &result);
+                     CommandReturnObject &result,
+                     bool force_repeat_command = false);
 
-  bool WasInterrupted() const;
+  bool InterruptCommand();
 
   /// Execute a list of commands in sequence.
   ///
@@ -557,6 +561,9 @@ public:
   bool GetPromptOnQuit() const;
   void SetPromptOnQuit(bool enable);
 
+  bool GetSaveTranscript() const;
+  void SetSaveTranscript(bool enable);
+
   bool GetSaveSessionOnQuit() const;
   void SetSaveSessionOnQuit(bool enable);
 
@@ -636,17 +643,32 @@ public:
 
   bool IOHandlerInterrupt(IOHandler &io_handler) override;
 
+  Status PreprocessCommand(std::string &command);
+  Status PreprocessToken(std::string &token);
+
+  void IncreaseCommandUsage(const CommandObject &cmd_obj) {
+    ++m_command_usages[cmd_obj.GetCommandName()];
+  }
+
+  llvm::json::Value GetStatistics();
+  const StructuredData::Array &GetTranscript() const;
+
 protected:
   friend class Debugger;
+
+  // This checks just the RunCommandInterpreter interruption state.  It is only
+  // meant to be used in Debugger::InterruptRequested
+  bool WasInterrupted() const;
 
   // IOHandlerDelegate functions
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &line) override;
 
-  ConstString IOHandlerGetControlSequence(char ch) override {
+  llvm::StringRef IOHandlerGetControlSequence(char ch) override {
+    static constexpr llvm::StringLiteral control_sequence("quit\n");
     if (ch == 'd')
-      return ConstString("quit\n");
-    return ConstString();
+      return control_sequence;
+    return {};
   }
 
   void GetProcessOutput();
@@ -665,8 +687,6 @@ private:
   void OverrideExecutionContext(const ExecutionContext &override_context);
 
   void RestoreExecutionContext();
-
-  Status PreprocessCommand(std::string &command);
 
   void SourceInitFile(FileSpec file, CommandReturnObject &result);
 
@@ -701,7 +721,6 @@ private:
 
   void StartHandlingCommand();
   void FinishHandlingCommand();
-  bool InterruptCommand();
 
   Debugger &m_debugger; // The debugger session that this interpreter is
                         // associated with
@@ -747,7 +766,24 @@ private:
   // If the driver is accepts custom exit codes for the 'quit' command.
   bool m_allow_exit_code = false;
 
+  /// Command usage statistics.
+  typedef llvm::StringMap<uint64_t> CommandUsageMap;
+  CommandUsageMap m_command_usages;
+
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
+  /// this stream. Otherwise this stream is empty.
   StreamString m_transcript_stream;
+
+  /// Contains a list of handled commands and their details. Each element in
+  /// the list is a dictionary with the following keys/values:
+  /// - "command" (string): The command that was executed.
+  /// - "output" (string): The output of the command. Empty ("") if no output.
+  /// - "error" (string): The error of the command. Empty ("") if no error.
+  /// - "seconds" (float): The time it took to execute the command.
+  ///
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
+  /// this list. Otherwise this list is empty.
+  StructuredData::Array m_transcript;
 };
 
 } // namespace lldb_private

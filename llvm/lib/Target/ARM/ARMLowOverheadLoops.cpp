@@ -60,7 +60,6 @@
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -92,11 +91,11 @@ static bool isVectorPredicated(MachineInstr *MI) {
 }
 
 static bool isVectorPredicate(MachineInstr *MI) {
-  return MI->findRegisterDefOperandIdx(ARM::VPR) != -1;
+  return MI->findRegisterDefOperandIdx(ARM::VPR, /*TRI=*/nullptr) != -1;
 }
 
 static bool hasVPRUse(MachineInstr &MI) {
-  return MI.findRegisterUseOperandIdx(ARM::VPR) != -1;
+  return MI.findRegisterUseOperandIdx(ARM::VPR, /*TRI=*/nullptr) != -1;
 }
 
 static bool isDomainMVE(MachineInstr *MI) {
@@ -427,11 +426,6 @@ namespace {
     // after tail predication conversion.
     bool ValidateLiveOuts();
 
-    // Is it safe to define LR with DLS/WLS?
-    // LR can be defined if it is the operand to start, because it's the same
-    // value, or if it's going to be equivalent to the operand to Start.
-    MachineInstr *isSafeToDefineLR();
-
     // Check the branch targets are within range and we satisfy our
     // restrictions.
     void Validate(ARMBasicBlockUtils *BBUtils);
@@ -570,7 +564,8 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
     SmallPtrSet<MachineInstr *, 2> ModifiedITs;
     SmallPtrSet<MachineInstr *, 2> RemoveITs;
     for (auto *Dead : Killed) {
-      if (MachineOperand *MO = Dead->findRegisterUseOperand(ARM::ITSTATE)) {
+      if (MachineOperand *MO =
+              Dead->findRegisterUseOperand(ARM::ITSTATE, /*TRI=*/nullptr)) {
         MachineInstr *IT = RDA.getMIOperand(Dead, *MO);
         RemoveITs.insert(IT);
         auto &CurrentBlock = ITBlocks[IT];
@@ -907,7 +902,7 @@ static bool producesFalseLanesZero(MachineInstr &MI,
       continue;
     // Skip the lr predicate reg
     int PIdx = llvm::findFirstVPTPredOperandIdx(MI);
-    if (PIdx != -1 && (int)MI.getOperandNo(&MO) == PIdx + 2)
+    if (PIdx != -1 && (int)MO.getOperandNo() == PIdx + 2)
       continue;
 
     // Check that this instruction will produce zeros in its false lanes:
@@ -1249,7 +1244,7 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr *MI) {
   const MCInstrDesc &MCID = MI->getDesc();
   bool IsUse = false;
   unsigned LastOpIdx = MI->getNumOperands() - 1;
-  for (auto &Op : enumerate(reverse(MCID.operands()))) {
+  for (const auto &Op : enumerate(reverse(MCID.operands()))) {
     const MachineOperand &MO = MI->getOperand(LastOpIdx - Op.index());
     if (!MO.isReg() || !MO.isUse() || MO.getReg() != ARM::VPR)
       continue;
@@ -1812,12 +1807,7 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
   PostOrderLoopTraversal DFS(LoLoop.ML, *MLI);
   DFS.ProcessLoop();
   const SmallVectorImpl<MachineBasicBlock*> &PostOrder = DFS.getOrder();
-  for (auto *MBB : PostOrder) {
-    recomputeLiveIns(*MBB);
-    // FIXME: For some reason, the live-in print order is non-deterministic for
-    // our tests and I can't out why... So just sort them.
-    MBB->sortUniqueLiveIns();
-  }
+  fullyRecomputeLiveIns(PostOrder);
 
   for (auto *MBB : reverse(PostOrder))
     recomputeLivenessFlags(*MBB);

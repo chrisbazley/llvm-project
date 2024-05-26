@@ -6,18 +6,6 @@
 # platform.
 # ------------------------------------------------------------------------------
 
-if(LIBC_GPU_BUILD)
-  # We set the generic target and OS to "gpu" here. More specific defintions
-  # for the exact target GPU are set up in prepare_libc_gpu_build.cmake.
-  set(LIBC_TARGET_OS "gpu")
-  set(LIBC_TARGET_ARCHITECTURE_IS_GPU TRUE)
-  set(LIBC_TARGET_ARCHITECTURE "gpu")
-  if(LIBC_TARGET_TRIPLE)
-    message(WARNING "LIBC_TARGET_TRIPLE is ignored as LIBC_GPU_BUILD is on. ")
-  endif()
-  return()
-endif()
-
 if(MSVC)
   # If the compiler is visual c++ or equivalent, we will assume a host build.
   set(LIBC_TARGET_OS ${CMAKE_HOST_SYSTEM_NAME})
@@ -46,6 +34,8 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   if(target_arch MATCHES "^mips")
     set(target_arch "mips")
   elseif(target_arch MATCHES "^arm")
+    # TODO(lntue): Shall we separate `arm64`?  It is currently recognized as
+    # `arm` here.
     set(target_arch "arm")
   elseif(target_arch MATCHES "^aarch64")
     set(target_arch "aarch64")
@@ -53,29 +43,55 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
     set(target_arch "x86_64")
   elseif(target_arch MATCHES "^(powerpc|ppc)")
     set(target_arch "power")
+  elseif(target_arch MATCHES "^riscv32")
+    set(target_arch "riscv32")
+  elseif(target_arch MATCHES "^riscv64")
+    set(target_arch "riscv64")
+  elseif(target_arch MATCHES "^amdgcn")
+    set(target_arch "amdgpu")
+  elseif(target_arch MATCHES "^nvptx64")
+    set(target_arch "nvptx")
   else()
     return()
   endif()
 
   set(${arch_var} ${target_arch} PARENT_SCOPE)
   list(GET triple_comps ${system_index} target_sys)
+
+  # Correcting OS name for Apple's systems.
+  if(target_sys STREQUAL "apple")
+    list(GET triple_comps 2 target_sys)
+  endif()
+  # Strip version from `darwin###`
+  if(target_sys MATCHES "^darwin")
+    set(target_sys "darwin")
+  endif()
+
+  # Setting OS name for GPU architectures.
+  list(GET triple_comps -1 gpu_target_sys)
+  if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda")
+    set(target_sys "gpu")
+  endif()
+
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 
-# Query the default target triple of the compiler.
-set(target_triple_option "-print-target-triple")
-if(CMAKE_COMPILER_IS_GNUCXX)
-  # GCC does not support the "-print-target-triple" option but supports
-  # "-print-multiarch" which clang does not support for all targets.
-  set(target_triple_option "-print-multiarch")
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version -v
+                RESULT_VARIABLE libc_compiler_info_result
+                OUTPUT_VARIABLE libc_compiler_info
+                ERROR_VARIABLE libc_compiler_info)
+if(NOT (libc_compiler_info_result EQUAL "0"))
+  message(FATAL_ERROR "libc build: error querying compiler info from the "
+                      "compiler: ${libc_compiler_info}")
 endif()
-execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${target_triple_option}
-                RESULT_VARIABLE libc_compiler_triple_check
-                OUTPUT_VARIABLE libc_compiler_triple)
-if(NOT (libc_compiler_triple_check EQUAL "0"))
-  message(FATAL_ERROR "libc build: error querying target triple from the "
-                      "compiler: ${libc_compiler_triple}")
+string(REGEX MATCH "Target: [-_a-z0-9.]+[ \r\n]+"
+       libc_compiler_target_info ${libc_compiler_info})
+if(NOT libc_compiler_target_info)
+  message(FATAL_ERROR "libc build: could not read compiler target info from:\n"
+                      "${libc_compiler_info}")
 endif()
+string(STRIP ${libc_compiler_target_info} libc_compiler_target_info)
+string(SUBSTRING ${libc_compiler_target_info} 8 -1 libc_compiler_triple)
 get_arch_and_system_from_triple(${libc_compiler_triple}
                                 compiler_arch compiler_sys)
 if(NOT compiler_arch)
@@ -132,6 +148,16 @@ elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "aarch64")
   set(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 TRUE)
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
   set(LIBC_TARGET_ARCHITECTURE_IS_X86 TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "riscv64")
+  set(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 TRUE)
+  set(LIBC_TARGET_ARCHITECTURE "riscv")
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "riscv32")
+  set(LIBC_TARGET_ARCHITECTURE_IS_RISCV32 TRUE)
+  set(LIBC_TARGET_ARCHITECTURE "riscv")
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "amdgpu")
+  set(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "nvptx")
+  set(LIBC_TARGET_ARCHITECTURE_IS_NVPTX TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")
@@ -141,10 +167,22 @@ if(LIBC_TARGET_OS STREQUAL "baremetal")
   set(LIBC_TARGET_OS_IS_BAREMETAL TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "linux")
   set(LIBC_TARGET_OS_IS_LINUX TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "poky" OR LIBC_TARGET_OS STREQUAL "suse" OR
+       LIBC_TARGET_OS STREQUAL "redhat")
+  # poky are custom Linux-base systems created by yocto. Since these are Linux
+  # images, we change the LIBC_TARGET_OS to linux. This define is used to
+  # include the right directories during compilation.
+  #
+  # openSUSE and redhat use different triple format which causes LIBC_TARGET_OS
+  # to be computed as "suse" or "redhat" instead of "linux".
+  set(LIBC_TARGET_OS_IS_LINUX TRUE)
+  set(LIBC_TARGET_OS "linux")
 elseif(LIBC_TARGET_OS STREQUAL "darwin")
   set(LIBC_TARGET_OS_IS_DARWIN TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "windows")
   set(LIBC_TARGET_OS_IS_WINDOWS TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "gpu")
+  set(LIBC_TARGET_OS_IS_GPU TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target operating system ${LIBC_TARGET_OS}")
@@ -160,8 +198,8 @@ if(explicit_target_triple AND
   set(LIBC_CROSSBUILD TRUE)
   if(CMAKE_COMPILER_IS_GNUCXX)
     message(FATAL_ERROR
-            "GCC target triple and the explicity specified target triple do "
-            "not match.")
+            "GCC target triple (${libc_compiler_triple}) and the explicity "
+            "specified target triple (${explicit_target_triple}) do not match.")
   else()
     list(APPEND
          LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")

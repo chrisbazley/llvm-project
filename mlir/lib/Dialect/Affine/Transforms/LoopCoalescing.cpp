@@ -19,32 +19,36 @@
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
+namespace affine {
 #define GEN_PASS_DEF_LOOPCOALESCING
 #include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
 } // namespace mlir
 
 #define PASS_NAME "loop-coalescing"
 #define DEBUG_TYPE PASS_NAME
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 struct LoopCoalescingPass
-    : public impl::LoopCoalescingBase<LoopCoalescingPass> {
+    : public affine::impl::LoopCoalescingBase<LoopCoalescingPass> {
 
   void runOnOperation() override {
     func::FuncOp func = getOperation();
     func.walk<WalkOrder::PreOrder>([](Operation *op) {
       if (auto scfForOp = dyn_cast<scf::ForOp>(op))
-        (void)coalescePerfectlyNestedLoops(scfForOp);
+        (void)coalescePerfectlyNestedSCFForLoops(scfForOp);
       else if (auto affineForOp = dyn_cast<AffineForOp>(op))
-        (void)coalescePerfectlyNestedLoops(affineForOp);
+        (void)coalescePerfectlyNestedAffineLoops(affineForOp);
     });
   }
 };
 
 } // namespace
 
-std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLoopCoalescingPass() {
+std::unique_ptr<OperationPass<func::FuncOp>>
+mlir::affine::createLoopCoalescingPass() {
   return std::make_unique<LoopCoalescingPass>();
 }

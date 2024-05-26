@@ -9,8 +9,8 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
-#include "flang/Optimizer/Support/KindMapping.h"
 
 struct ComplexTest : public testing::Test {
 public:
@@ -96,6 +96,6 @@ TEST_F(ComplexTest, verifyConvertWithSemantics) {
 
   // Convert complex to integer
   mlir::Value v2 = firBuilder->convertWithSemantics(loc, integerTy1, v1);
-  EXPECT_TRUE(v2.getType().isa<mlir::IntegerType>());
+  EXPECT_TRUE(mlir::isa<mlir::IntegerType>(v2.getType()));
   EXPECT_TRUE(mlir::dyn_cast<fir::ConvertOp>(v2.getDefiningOp()));
 }

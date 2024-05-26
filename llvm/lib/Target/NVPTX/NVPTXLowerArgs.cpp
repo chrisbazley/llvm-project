@@ -183,17 +183,16 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
     }
     if (auto *GEP = dyn_cast<GetElementPtrInst>(I.OldInstruction)) {
       SmallVector<Value *, 4> Indices(GEP->indices());
-      auto *NewGEP = GetElementPtrInst::Create(GEP->getSourceElementType(),
-                                               I.NewParam, Indices,
-                                               GEP->getName(), GEP);
+      auto *NewGEP = GetElementPtrInst::Create(
+          GEP->getSourceElementType(), I.NewParam, Indices, GEP->getName(),
+          GEP->getIterator());
       NewGEP->setIsInBounds(GEP->isInBounds());
       return NewGEP;
     }
     if (auto *BC = dyn_cast<BitCastInst>(I.OldInstruction)) {
-      auto *NewBCType = PointerType::getWithSamePointeeType(
-          cast<PointerType>(BC->getType()), ADDRESS_SPACE_PARAM);
+      auto *NewBCType = PointerType::get(BC->getContext(), ADDRESS_SPACE_PARAM);
       return BitCastInst::Create(BC->getOpcode(), I.NewParam, NewBCType,
-                                 BC->getName(), BC);
+                                 BC->getName(), BC->getIterator());
     }
     if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I.OldInstruction)) {
       assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM);
@@ -317,7 +316,7 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
 void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
                                       Argument *Arg) {
   Function *Func = Arg->getParent();
-  Instruction *FirstInst = &(Func->getEntryBlock().front());
+  BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();
   Type *StructType = Arg->getParamByValType();
   assert(StructType && "Missing byval type");
 
@@ -407,12 +406,10 @@ void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
   }
 
   Instruction *PtrInGlobal = new AddrSpaceCastInst(
-      Ptr,
-      PointerType::getWithSamePointeeType(cast<PointerType>(Ptr->getType()),
-                                          ADDRESS_SPACE_GLOBAL),
-      Ptr->getName(), &*InsertPt);
+      Ptr, PointerType::get(Ptr->getContext(), ADDRESS_SPACE_GLOBAL),
+      Ptr->getName(), InsertPt);
   Value *PtrInGeneric = new AddrSpaceCastInst(PtrInGlobal, Ptr->getType(),
-                                              Ptr->getName(), &*InsertPt);
+                                              Ptr->getName(), InsertPt);
   // Replace with PtrInGeneric all uses of Ptr except PtrInGlobal.
   Ptr->replaceAllUsesWith(PtrInGeneric);
   PtrInGlobal->setOperand(0, Ptr);
@@ -423,17 +420,31 @@ void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
 // =============================================================================
 bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
                                          Function &F) {
+  // Copying of byval aggregates + SROA may result in pointers being loaded as
+  // integers, followed by intotoptr. We may want to mark those as global, too,
+  // but only if the loaded integer is used exclusively for conversion to a
+  // pointer with inttoptr.
+  auto HandleIntToPtr = [this](Value &V) {
+    if (llvm::all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); })) {
+      SmallVector<User *, 16> UsersToUpdate(V.users());
+      for (User *U : UsersToUpdate)
+        markPointerAsGlobal(U);
+    }
+  };
   if (TM.getDrvInterface() == NVPTX::CUDA) {
     // Mark pointers in byval structs as global.
     for (auto &B : F) {
       for (auto &I : B) {
         if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-          if (LI->getType()->isPointerTy()) {
+          if (LI->getType()->isPointerTy() || LI->getType()->isIntegerTy()) {
             Value *UO = getUnderlyingObject(LI->getPointerOperand());
             if (Argument *Arg = dyn_cast<Argument>(UO)) {
               if (Arg->hasByValAttr()) {
                 // LI is a load from a pointer within a byval kernel parameter.
-                markPointerAsGlobal(LI);
+                if (LI->getType()->isPointerTy())
+                  markPointerAsGlobal(LI);
+                else
+                  HandleIntToPtr(*LI);
               }
             }
           }
@@ -449,6 +460,9 @@ bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
         handleByValParam(TM, &Arg);
       else if (TM.getDrvInterface() == NVPTX::CUDA)
         markPointerAsGlobal(&Arg);
+    } else if (Arg.getType()->isIntegerTy() &&
+               TM.getDrvInterface() == NVPTX::CUDA) {
+      HandleIntToPtr(Arg);
     }
   }
   return true;

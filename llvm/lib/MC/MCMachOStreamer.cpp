@@ -31,7 +31,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
 
@@ -359,6 +358,7 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_LGlobal:
   case MCSA_Exported:
   case MCSA_Memtag:
+  case MCSA_WeakAntiDep:
     return false;
 
   case MCSA_Global:
@@ -486,8 +486,7 @@ void MCMachOStreamer::emitInstToData(const MCInst &Inst,
 
   SmallVector<MCFixup, 4> Fixups;
   SmallString<256> Code;
-  raw_svector_ostream VecOS(Code);
-  getAssembler().getEmitter().encodeInstruction(Inst, VecOS, Fixups, STI);
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
   // Add the fixups and data.
   for (MCFixup &Fixup : Fixups) {
@@ -536,9 +535,7 @@ void MCMachOStreamer::finishImpl() {
 
 void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
   const MCSymbol *S = &SRE->getSymbol();
-  bool Created;
-  getAssembler().registerSymbol(*S, &Created);
-  if (Created)
+  if (getAssembler().registerSymbol(*S))
     S->setExternal(true);
 }
 
@@ -567,7 +564,7 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
                                       std::unique_ptr<MCAsmBackend> &&MAB,
                                       std::unique_ptr<MCObjectWriter> &&OW,
                                       std::unique_ptr<MCCodeEmitter> &&CE,
-                                      bool RelaxAll, bool DWARFMustBeAtTheEnd,
+                                      bool DWARFMustBeAtTheEnd,
                                       bool LabelSections) {
   MCMachOStreamer *S =
       new MCMachOStreamer(Context, std::move(MAB), std::move(OW), std::move(CE),
@@ -577,8 +574,6 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
       Target, Context.getObjectFileInfo()->getSDKVersion(),
       Context.getObjectFileInfo()->getDarwinTargetVariantTriple(),
       Context.getObjectFileInfo()->getDarwinTargetVariantSDKVersion());
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }
 

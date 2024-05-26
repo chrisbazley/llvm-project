@@ -7,6 +7,7 @@ setup_host_tool(clang-tidy-confusable-chars-gen CLANG_TIDY_CONFUSABLE_CHARS_GEN 
 
 add_subdirectory(ConfusableTable)
 
+include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../../include-cleaner/include")
 
 add_custom_command(
     OUTPUT Confusables.inc
@@ -14,11 +15,15 @@ add_custom_command(
     DEPENDS ${clang_tidy_confusable_chars_gen_target} ConfusableTable/confusables.txt)
 
 add_custom_target(genconfusable DEPENDS Confusables.inc)
+set_target_properties(genconfusable PROPERTIES FOLDER "Clang Tools Extra/Sourcegenning")
 
 add_clang_library(clangTidyMiscModule
   ConstCorrectnessCheck.cpp
+  CoroutineHostileRAIICheck.cpp
   DefinitionsInHeadersCheck.cpp
   ConfusableIdentifierCheck.cpp
+  HeaderIncludeCycleCheck.cpp
+  IncludeCleanerCheck.cpp
   MiscTidyModule.cpp
   MisleadingBidirectional.cpp
   MisleadingIdentifier.cpp
@@ -45,7 +50,9 @@ add_clang_library(clangTidyMiscModule
   DEPENDS
   omp_gen
   genconfusable
+  ClangDriverOptions
   )
+set_target_properties(clangTidyMiscModule PROPERTIES FOLDER "Clang Tools Extra/Libraries")
 
 clang_target_link_libraries(clangTidyMiscModule
   PRIVATE
@@ -53,7 +60,14 @@ clang_target_link_libraries(clangTidyMiscModule
   clangAST
   clangASTMatchers
   clangBasic
+  clangFormat
   clangLex
   clangSerialization
   clangTooling
+  clangToolingInclusions
+  clangToolingInclusionsStdlib
+  )
+target_link_libraries(clangTidyMiscModule
+  PRIVATE
+  clangIncludeCleaner
   )

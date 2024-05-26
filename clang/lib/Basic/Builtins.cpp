@@ -38,7 +38,7 @@ static constexpr Builtin::Info BuiltinInfo[] = {
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANGS},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER, LANGS)                             \
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
 };
 
 const Builtin::Info &Builtin::Context::getRecord(unsigned ID) const {
@@ -64,7 +64,7 @@ bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   bool InStdNamespace = FuncName.consume_front("std-");
   for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin;
        ++i) {
-    if (FuncName.equals(BuiltinInfo[i].Name) &&
+    if (FuncName == BuiltinInfo[i].Name &&
         (bool)strchr(BuiltinInfo[i].Attributes, 'z') == InStdNamespace)
       return strchr(BuiltinInfo[i].Attributes, 'f') != nullptr;
   }
@@ -151,7 +151,7 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
       unsigned ID = NameIt->second->getBuiltinID();
       if (ID != Builtin::NotBuiltin && isPredefinedLibFunction(ID) &&
           isInStdNamespace(ID) == InStdNamespace) {
-        Table.get(Name).setBuiltinID(Builtin::NotBuiltin);
+        NameIt->second->clearBuiltinID();
       }
     }
   }

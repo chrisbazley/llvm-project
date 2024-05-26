@@ -11,6 +11,7 @@
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "int-range-analysis"
 
@@ -43,19 +44,32 @@ void BoolConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 // we take the 64-bit result).
 //===----------------------------------------------------------------------===//
 
+// Some arithmetic inference functions allow specifying special overflow / wrap
+// behavior. We do not require this for the IndexOps and use this helper to call
+// the inference function without any `OverflowFlags`.
+static std::function<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>
+inferWithoutOverflowFlags(InferRangeWithOvfFlagsFn inferWithOvfFn) {
+  return [inferWithOvfFn](ArrayRef<ConstantIntRanges> argRanges) {
+    return inferWithOvfFn(argRanges, OverflowFlags::None);
+  };
+}
+
 void AddOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferIndexOp(inferAdd, argRanges, CmpMode::Both));
+  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferAdd),
+                                           argRanges, CmpMode::Both));
 }
 
 void SubOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferIndexOp(inferSub, argRanges, CmpMode::Both));
+  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferSub),
+                                           argRanges, CmpMode::Both));
 }
 
 void MulOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferIndexOp(inferMul, argRanges, CmpMode::Both));
+  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferMul),
+                                           argRanges, CmpMode::Both));
 }
 
 void DivUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
@@ -126,7 +140,8 @@ void MinUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void ShlOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferIndexOp(inferShl, argRanges, CmpMode::Both));
+  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferShl),
+                                           argRanges, CmpMode::Both));
 }
 
 void ShrSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
@@ -220,13 +235,13 @@ void CmpOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   APInt min = APInt::getZero(1);
-  APInt max = APInt::getAllOnesValue(1);
+  APInt max = APInt::getAllOnes(1);
 
-  Optional<bool> truthValue64 = intrange::evaluatePred(pred, lhs, rhs);
+  std::optional<bool> truthValue64 = intrange::evaluatePred(pred, lhs, rhs);
 
   ConstantIntRanges lhsTrunc = truncRange(lhs, indexMinWidth),
                     rhsTrunc = truncRange(rhs, indexMinWidth);
-  Optional<bool> truthValue32 =
+  std::optional<bool> truthValue32 =
       intrange::evaluatePred(pred, lhsTrunc, rhsTrunc);
 
   if (truthValue64 == truthValue32) {

@@ -61,6 +61,14 @@ public:
   /// Return metadata containing two branch weights.
   MDNode *createBranchWeights(uint32_t TrueWeight, uint32_t FalseWeight);
 
+  /// Return metadata containing two branch weights, with significant bias
+  /// towards `true` destination.
+  MDNode *createLikelyBranchWeights();
+
+  /// Return metadata containing two branch weights, with significant bias
+  /// towards `false` destination.
+  MDNode *createUnlikelyBranchWeights();
+
   /// Return metadata containing a number of branch weights.
   MDNode *createBranchWeights(ArrayRef<uint32_t> Weights);
 
@@ -78,7 +86,7 @@ public:
   MDNode *createFunctionSectionPrefix(StringRef Prefix);
 
   /// Return metadata containing the pseudo probe descriptor for a function.
-  MDNode *createPseudoProbeDesc(uint64_t GUID, uint64_t Hash, Function *F);
+  MDNode *createPseudoProbeDesc(uint64_t GUID, uint64_t Hash, StringRef FName);
 
   /// Return metadata containing llvm statistics.
   MDNode *

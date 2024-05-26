@@ -60,6 +60,7 @@ public:
     keyword_start,
     kw_attr_dict,
     kw_attr_dict_w_keyword,
+    kw_prop_dict,
     kw_custom,
     kw_functional_type,
     kw_oilist,
@@ -234,7 +235,15 @@ private:
 class VariableElement : public FormatElementBase<FormatElement::Variable> {
 public:
   /// These are the kinds of variables.
-  enum Kind { Attribute, Operand, Region, Result, Successor, Parameter };
+  enum Kind {
+    Attribute,
+    Operand,
+    Region,
+    Result,
+    Successor,
+    Parameter,
+    Property
+  };
 
   /// Get the kind of variable.
   Kind getKind() const { return kind; }
@@ -287,6 +296,7 @@ public:
   /// These are the kinds of directives.
   enum Kind {
     AttrDict,
+    PropDict,
     Custom,
     FunctionalType,
     OIList,
@@ -485,9 +495,12 @@ protected:
   FailureOr<FormatElement *> parseDirective(Context ctx);
   /// Parse an optional group.
   FailureOr<FormatElement *> parseOptionalGroup(Context ctx);
-
   /// Parse a custom directive.
   FailureOr<FormatElement *> parseCustomDirective(llvm::SMLoc loc, Context ctx);
+  /// Parse a ref directive.
+  FailureOr<FormatElement *> parseRefDirective(SMLoc loc, Context context);
+  /// Parse a qualified directive.
+  FailureOr<FormatElement *> parseQualifiedDirective(SMLoc loc, Context ctx);
 
   /// Parse a format-specific variable kind.
   virtual FailureOr<FormatElement *>
@@ -511,6 +524,11 @@ protected:
   verifyOptionalGroupElements(llvm::SMLoc loc,
                               ArrayRef<FormatElement *> elements,
                               FormatElement *anchor) = 0;
+
+  /// Mark 'element' as qualified. If 'element' cannot be qualified an error
+  /// should be emitted and failure returned.
+  virtual LogicalResult markQualified(llvm::SMLoc loc,
+                                      FormatElement *element) = 0;
 
   //===--------------------------------------------------------------------===//
   // Lexer Utilities

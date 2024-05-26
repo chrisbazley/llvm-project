@@ -15,7 +15,6 @@
 #define MLIR_IR_LOCATION_H
 
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/SubElementInterfaces.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
@@ -79,14 +78,17 @@ public:
 
   /// Type casting utilities on the underlying location.
   template <typename U>
+  [[deprecated("Use mlir::isa<U>() instead")]]
   bool isa() const {
     return llvm::isa<U>(*this);
   }
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
   U dyn_cast() const {
     return llvm::dyn_cast<U>(*this);
   }
   template <typename U>
+  [[deprecated("Use mlir::cast<U>() instead")]]
   U cast() const {
     return llvm::cast<U>(*this);
   }
@@ -149,13 +151,13 @@ public:
 
   /// Return the metadata associated with this fused location.
   MetadataT getMetadata() const {
-    return FusedLoc::getMetadata().template cast<MetadataT>();
+    return llvm::cast<MetadataT>(FusedLoc::getMetadata());
   }
 
   /// Support llvm style casting.
   static bool classof(Attribute attr) {
-    auto fusedLoc = attr.dyn_cast<FusedLoc>();
-    return fusedLoc && fusedLoc.getMetadata().isa_and_nonnull<MetadataT>();
+    auto fusedLoc = llvm::dyn_cast<FusedLoc>(attr);
+    return fusedLoc && mlir::isa_and_nonnull<MetadataT>(fusedLoc.getMetadata());
   }
 };
 
@@ -172,13 +174,13 @@ inline OpaqueLoc OpaqueLoc::get(T underlyingLocation, MLIRContext *context) {
 }
 
 //===----------------------------------------------------------------------===//
-// SubElementInterfaces
+// SubElements
 //===----------------------------------------------------------------------===//
 
 /// Enable locations to be introspected as sub-elements.
 template <>
 struct AttrTypeSubElementHandler<Location> {
-  static void walk(Location param, AttrTypeSubElementWalker &walker) {
+  static void walk(Location param, AttrTypeImmediateSubElementWalker &walker) {
     walker.walk(param);
   }
   static Location replace(Location param, AttrSubElementReplacements &attrRepls,

@@ -153,7 +153,7 @@ ARCHFLAG ?= -arch
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Darwin"
 	DS := $(DSYMUTIL)
-	DSFLAGS =
+	DSFLAGS := $(DSFLAGS_EXTRAS)
 	DSYM = $(EXE).dSYM
 	AR := $(CROSS_COMPILE)libtool
 	ARFLAGS := -static -o
@@ -238,10 +238,11 @@ ifeq "$(OS)" "Darwin"
 endif
 
 ifeq "$(OS)" "Darwin"
-	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
+	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES)
 else
-	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
+	CFLAGS += $(ARCHFLAG)$(ARCH)
 endif
+CFLAGS += -I$(LLDB_BASE_DIR)include -I$(LLDB_OBJ_ROOT)/include
 
 CFLAGS += -I$(SRCDIR) -I$(THIS_FILE_DIR)
 
@@ -426,6 +427,16 @@ ifeq (1,$(USE_LIBCPP))
 				endif
 		endif
 	endif
+endif
+
+ifeq (1, $(USE_SYSTEM_STDLIB))
+    ifeq "$(OS)" "Darwin"
+        ifeq "$(SDKROOT)" ""
+             $(error "SDKROOT must be set on Darwin to use the system libcxx")
+        endif
+        CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(SDKROOT)/usr/include/c++/v1
+        LDFLAGS += -L$(SDKROOT)/usr/lib -Wl,-rpath,$(SDKROOT)/usr/lib -lc++
+    endif
 endif
 
 # If no explicit request was made, but we have paths to a custom libcxx, use

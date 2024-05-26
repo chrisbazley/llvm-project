@@ -22,7 +22,7 @@ include "flang/Optimizer/Dialect/FIRDialect.td"
 
 class FIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
-    : TypeDef<fir_Dialect, name, traits, baseCppClass> {
+    : TypeDef<FIROpsDialect, name, traits, baseCppClass> {
   let mnemonic = typeMnemonic;
 }
 
@@ -211,6 +211,10 @@ def fir_HeapType : FIR_Type<"Heap", "heap"> {
       return Base::get(elementType.getContext(), elementType);
     }]>,
   ];
+
+  let extraClassDeclaration = [{
+    mlir::Type getElementType() const { return getEleTy(); }
+  }];
 }
 
 def fir_IntegerType : FIR_Type<"Integer", "int"> {
@@ -275,6 +279,10 @@ def fir_LLVMPointerType : FIR_Type<"LLVMPointer", "llvm_ptr"> {
       return Base::get(elementType.getContext(), elementType);
     }]>,
   ];
+
+  let extraClassDeclaration = [{
+    mlir::Type getElementType() const { return getEleTy(); }
+  }];
 }
 
 def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
@@ -318,6 +326,8 @@ def fir_RealType : FIR_Type<"Real", "real"> {
 
   let extraClassDeclaration = [{
     using KindTy = unsigned;
+    // Get MLIR float type with same semantics.
+    mlir::Type getFloatType(const fir::KindMapping &kindMap) const;
   }];
 
   let genVerifyDecl = 1;
@@ -487,6 +497,14 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     static constexpr Extent getUnknownExtent() {
       return mlir::ShapedType::kDynamic;
     }
+
+    std::uint64_t getConstantArraySize() {
+      assert(!hasDynamicExtents() && "array type must have constant shape");
+      std::uint64_t size = 1;
+      for (Extent extent : getShape())
+        size = size * static_cast<std::uint64_t>(extent);
+      return size;
+    }
   }];
 }
 
@@ -558,9 +576,20 @@ def fir_VoidType : FIR_Type<"Void", "void"> {
   let genStorageClass = 0;
 }
 
+def fir_DummyScopeType : FIR_Type<"DummyScope", "dscope"> {
+  let summary = "Dummy scope type";
+
+  let description = [{
+    `fir.dscope` is a type returned by fir.dummy_scope operation.
+    It defines a unique identifier for a runtime instance of a subroutine
+    that is used by the [hl]fir.declare operations representing
+    the dummy arguments' declarations.
+  }];
+}
+
 // Whether a type is a BaseBoxType
 def IsBaseBoxTypePred
-        : CPred<"$_self.isa<::fir::BaseBoxType>()">;
+        : CPred<"mlir::isa<::fir::BaseBoxType>($_self)">;
 def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
@@ -607,6 +636,7 @@ def AnyRefOrBoxLike : TypeConstraint<Or<[AnyReferenceLike.predicate,
 def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate,
     IsBaseBoxTypePred]>, "any reference or box">;
+def AnyRefOrBoxType : Type<AnyRefOrBox.predicate, "any legal ref or box type">;
 
 def AnyShapeLike : TypeConstraint<Or<[fir_ShapeType.predicate,
     fir_ShapeShiftType.predicate]>, "any legal shape type">;

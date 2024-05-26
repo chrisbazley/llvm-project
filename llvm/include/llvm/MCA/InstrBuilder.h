@@ -78,17 +78,16 @@ class InstrBuilder {
 
   bool FirstCallInst;
   bool FirstReturnInst;
+  unsigned CallLatency;
 
-  using InstRecycleCallback =
-      llvm::function_ref<Instruction *(const InstrDesc &)>;
+  using InstRecycleCallback = std::function<Instruction *(const InstrDesc &)>;
   InstRecycleCallback InstRecycleCB;
 
   Expected<const InstrDesc &>
-  createInstrDescImpl(const MCInst &MCI,
-                      const SmallVector<SharedInstrument> &IVec);
+  createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
   Expected<const InstrDesc &>
   getOrCreateInstrDesc(const MCInst &MCI,
-                       const SmallVector<SharedInstrument> &IVec);
+                       const SmallVector<Instrument *> &IVec);
 
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
@@ -100,7 +99,7 @@ class InstrBuilder {
 public:
   InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
                const MCRegisterInfo &RI, const MCInstrAnalysis *IA,
-               const InstrumentManager &IM);
+               const InstrumentManager &IM, unsigned CallLatency);
 
   void clear() {
     Descriptors.clear();
@@ -114,8 +113,7 @@ public:
   void setInstRecycleCallback(InstRecycleCallback CB) { InstRecycleCB = CB; }
 
   Expected<std::unique_ptr<Instruction>>
-  createInstruction(const MCInst &MCI,
-                    const SmallVector<SharedInstrument> &IVec);
+  createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
 };
 } // namespace mca
 } // namespace llvm

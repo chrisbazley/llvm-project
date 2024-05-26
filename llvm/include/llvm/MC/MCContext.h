@@ -26,6 +26,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -70,6 +71,10 @@ class SMLoc;
 class SourceMgr;
 enum class EmitDwarfUnwindType;
 
+namespace wasm {
+struct WasmSignature;
+}
+
 /// Context object for machine code objects.  This class owns all of the
 /// sections that it creates.
 ///
@@ -101,7 +106,7 @@ private:
   Triple TT;
 
   /// The SourceMgr for this object, if any.
-  const SourceMgr *SrcMgr;
+  const SourceMgr *SrcMgr = nullptr;
 
   /// The SourceMgr for inline assembly, if any.
   std::unique_ptr<SourceMgr> InlineSrcMgr;
@@ -110,16 +115,16 @@ private:
   DiagHandlerTy DiagHandler;
 
   /// The MCAsmInfo for this target.
-  const MCAsmInfo *MAI;
+  const MCAsmInfo *MAI = nullptr;
 
   /// The MCRegisterInfo for this target.
-  const MCRegisterInfo *MRI;
+  const MCRegisterInfo *MRI = nullptr;
 
   /// The MCObjectFileInfo for this target.
-  const MCObjectFileInfo *MOFI;
+  const MCObjectFileInfo *MOFI = nullptr;
 
   /// The MCSubtargetInfo for this target.
-  const MCSubtargetInfo *MSTI;
+  const MCSubtargetInfo *MSTI = nullptr;
 
   std::unique_ptr<CodeViewContext> CVContext;
 
@@ -138,6 +143,8 @@ private:
   SpecificBumpPtrAllocator<MCSectionWasm> WasmAllocator;
   SpecificBumpPtrAllocator<MCSectionXCOFF> XCOFFAllocator;
   SpecificBumpPtrAllocator<MCInst> MCInstAllocator;
+
+  SpecificBumpPtrAllocator<wasm::WasmSignature> WasmSignatureAllocator;
 
   /// Bindings of names to symbols.
   SymbolTable Symbols;
@@ -173,7 +180,7 @@ private:
   unsigned GetInstance(unsigned LocalLabelVal);
 
   /// LLVM_BB_ADDR_MAP version to emit.
-  uint8_t BBAddrMapVersion = 1;
+  uint8_t BBAddrMapVersion = 2;
 
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
@@ -190,7 +197,7 @@ private:
   SmallString<128> CompilationDir;
 
   /// Prefix replacement map for source file information.
-  std::map<std::string, const std::string, std::greater<>> DebugPrefixMap;
+  SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
 
   /// The main file name if passed in explicitly.
   std::string MainFileName;
@@ -384,29 +391,13 @@ private:
   /// Map of currently defined macros.
   StringMap<MCAsmMacro> MacroMap;
 
-  struct ELFEntrySizeKey {
-    std::string SectionName;
-    unsigned Flags;
-    unsigned EntrySize;
-
-    ELFEntrySizeKey(StringRef SectionName, unsigned Flags, unsigned EntrySize)
-        : SectionName(SectionName), Flags(Flags), EntrySize(EntrySize) {}
-
-    bool operator<(const ELFEntrySizeKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (Flags != Other.Flags)
-        return Flags < Other.Flags;
-      return EntrySize < Other.EntrySize;
-    }
-  };
-
   // Symbols must be assigned to a section with a compatible entry size and
   // flags. This map is used to assign unique IDs to sections to distinguish
   // between sections with identical names but incompatible entry sizes and/or
   // flags. This can occur when a symbol is explicitly assigned to a section,
-  // e.g. via __attribute__((section("myname"))).
-  std::map<ELFEntrySizeKey, unsigned> ELFEntrySizeMap;
+  // e.g. via __attribute__((section("myname"))). The map key is the tuple
+  // (section name, flags, entry size).
+  DenseMap<std::tuple<StringRef, unsigned, unsigned>, unsigned> ELFEntrySizeMap;
 
   // This set is used to record the generic mergeable section names seen.
   // These are sections that are created as mergeable e.g. .debug_str. We need
@@ -451,6 +442,8 @@ public:
 
   const MCSubtargetInfo *getSubtargetInfo() const { return MSTI; }
 
+  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
+
   CodeViewContext &getCVContext();
 
   void setAllowTemporaryLabels(bool Value) { AllowTemporaryLabels = Value; }
@@ -473,9 +466,11 @@ public:
   /// \name Symbol Management
   /// @{
 
-  /// Create and return a new linker temporary symbol with a unique but
-  /// unspecified name.
+  /// Create a new linker temporary symbol with the specified prefix (Name) or
+  /// "tmp". This creates a "l"-prefixed symbol for Mach-O and is identical to
+  /// createNamedTempSymbol for other object file formats.
   MCSymbol *createLinkerPrivateTempSymbol();
+  MCSymbol *createLinkerPrivateSymbol(const Twine &Name);
 
   /// Create a temporary symbol with a unique name. The name will be omitted
   /// in the symbol table if UseNamesOnTempLabels is false (default except
@@ -506,17 +501,17 @@ public:
   /// variable after codegen.
   ///
   /// \param Idx - The index of a local variable passed to \@llvm.localescape.
-  MCSymbol *getOrCreateFrameAllocSymbol(StringRef FuncName, unsigned Idx);
+  MCSymbol *getOrCreateFrameAllocSymbol(const Twine &FuncName, unsigned Idx);
 
-  MCSymbol *getOrCreateParentFrameOffsetSymbol(StringRef FuncName);
+  MCSymbol *getOrCreateParentFrameOffsetSymbol(const Twine &FuncName);
 
-  MCSymbol *getOrCreateLSDASymbol(StringRef FuncName);
+  MCSymbol *getOrCreateLSDASymbol(const Twine &FuncName);
 
   /// Get the symbol for \p Name, or null.
   MCSymbol *lookupSymbol(const Twine &Name) const;
 
   /// Set value for a symbol.
-  void setSymbolValue(MCStreamer &Streamer, StringRef Sym, uint64_t Val);
+  void setSymbolValue(MCStreamer &Streamer, const Twine &Sym, uint64_t Val);
 
   /// getSymbols - Get a reference for the symbol table for clients that
   /// want to, for example, iterate over all symbols. 'const' because we
@@ -533,6 +528,10 @@ public:
   /// registerInlineAsmLabel - Records that the name is a label referenced in
   /// inline assembly.
   void registerInlineAsmLabel(MCSymbol *Sym);
+
+  /// Allocates and returns a new `WasmSignature` instance (with empty parameter
+  /// and return type lists).
+  wasm::WasmSignature *createWasmSignature();
 
   /// @}
 
@@ -664,7 +663,7 @@ public:
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags, const MCSymbolWasm *Group,
                                 unsigned UniqueID, const char *BeginSymName);
-  
+
   /// Get the section for the provided Section name
   MCSectionDXContainer *getDXContainerSection(StringRef Section, SectionKind K);
 
@@ -788,6 +787,7 @@ public:
   void setGenDwarfForAssembly(bool Value) { GenDwarfForAssembly = Value; }
   unsigned getGenDwarfFileNumber() { return GenDwarfFileNumber; }
   EmitDwarfUnwindType emitDwarfUnwindInfo() const;
+  bool emitCompactUnwindNonCanonical() const;
 
   void setGenDwarfFileNumber(unsigned FileNumber) {
     GenDwarfFileNumber = FileNumber;
@@ -845,12 +845,18 @@ public:
 
   void deallocate(void *Ptr) {}
 
+  /// Allocates a copy of the given string on the allocator managed by this
+  /// context and returns the result.
+  StringRef allocateString(StringRef s) {
+    return StringSaver(Allocator).save(s);
+  }
+
   bool hadError() { return HadError; }
   void diagnose(const SMDiagnostic &SMD);
   void reportError(SMLoc L, const Twine &Msg);
   void reportWarning(SMLoc L, const Twine &Msg);
 
-  const MCAsmMacro *lookupMacro(StringRef Name) {
+  MCAsmMacro *lookupMacro(StringRef Name) {
     StringMap<MCAsmMacro>::iterator I = MacroMap.find(Name);
     return (I == MacroMap.end()) ? nullptr : &I->getValue();
   }

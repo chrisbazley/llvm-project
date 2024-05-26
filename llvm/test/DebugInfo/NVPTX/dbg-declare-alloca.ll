@@ -9,7 +9,6 @@
 ; CHECK: add.u64 %rd1, %SP, 0;
 ; CHECK: .loc 1 5 3                   // t.c:5:3
 ; CHECK: { // callseq 0, 0
-; CHECK: .reg .b32 temp_param_reg;
 ; CHECK: .param .b64 param0;
 ; CHECK: st.param.b64 [param0+0], %rd1;
 ; CHECK: call.uni
@@ -221,7 +220,7 @@
 ; Function Attrs: noinline nounwind uwtable
 define void @use_dbg_declare() #0 !dbg !7 {
 entry:
-  %o = alloca %struct.Foo, align 4
+  %o = alloca %struct.Foo, align 8
   call void @llvm.dbg.declare(metadata ptr %o, metadata !10, metadata !15), !dbg !16
   call void @escape_foo(ptr %o), !dbg !17
   ret void, !dbg !18

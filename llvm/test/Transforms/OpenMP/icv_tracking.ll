@@ -448,7 +448,7 @@ declare void @__cxa_rethrow()
 define i32 @maybe_throw(i1 zeroext %0) {
 ; CHECK-LABEL: define {{[^@]+}}@maybe_throw
 ; CHECK-SAME: (i1 zeroext [[TMP0:%.*]]) {
-; CHECK-NEXT:    call void @omp_set_num_threads(i32 4)
+; CHECK-NEXT:    call void @omp_set_num_threads(i32 4) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 ; CHECK:       2:
 ; CHECK-NEXT:    tail call void @__cxa_rethrow()
@@ -505,13 +505,13 @@ define void @test4_invoke(i1 %0) personality ptr @__gxx_personality_v0 {
 ; CHECK-SAME: (i1 [[TMP0:%.*]]) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    call void @known_unique_icv(i1 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = invoke i32 @maybe_throw(i1 zeroext [[TMP0]])
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; CHECK:       exc:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
+; CHECK-NEXT:            filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @icv_free_use(i32 10)

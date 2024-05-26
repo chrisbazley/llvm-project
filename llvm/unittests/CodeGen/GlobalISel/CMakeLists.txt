@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   CodeGen
+  CodeGenTypes
   Core
   FileCheck
   GlobalISel
@@ -14,6 +15,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(GlobalISelTests
   ConstantFoldingTest.cpp
   CSETest.cpp
+  GIMatchTableExecutorTest.cpp
   LegalizerTest.cpp
   LegalizerHelperTest.cpp
   LegalizerInfoTest.cpp

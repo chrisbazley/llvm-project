@@ -287,7 +287,7 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
   server_thread.join();
 
   GTEST_LOG_(INFO) << "Formatted output: " << ss.GetData();
-  auto object_sp = StructuredData::ParseJSON(std::string(ss.GetString()));
+  auto object_sp = StructuredData::ParseJSON(ss.GetString());
   ASSERT_TRUE(bool(object_sp));
   auto dict_sp = object_sp->GetAsDictionary();
   ASSERT_TRUE(bool(dict_sp));
@@ -297,10 +297,10 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
   dict_sp = object_sp->GetAsDictionary();
   ASSERT_TRUE(bool(dict_sp));
 
-  int num_packets;
+  size_t num_packets;
   ASSERT_TRUE(dict_sp->GetValueForKeyAsInteger("num_packets", num_packets))
       << ss.GetString();
-  ASSERT_EQ(10, num_packets);
+  ASSERT_EQ(10, (int)num_packets);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
@@ -591,4 +591,26 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteMemoryTags) {
                  std::numeric_limits<int32_t>::min(),
                  std::vector<uint8_t>{0x99}, "QMemTags:456789,0:80000000:99",
                  "E03", false);
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, CalculateMD5) {
+  FileSpec file_spec("/foo/bar", FileSpec::Style::posix);
+  std::future<ErrorOr<MD5::MD5Result>> async_result = std::async(
+      std::launch::async, [&] { return client.CalculateMD5(file_spec); });
+
+  lldb_private::StreamString stream;
+  stream.PutCString("vFile:MD5:");
+  stream.PutStringAsRawHex8(file_spec.GetPath(false));
+  HandlePacket(server, stream.GetString().str(),
+               "F,"
+               "deadbeef01020304"
+               "05060708deadbeef");
+  auto result = async_result.get();
+
+  // Server and client puts/parses low, and then high
+  const uint64_t expected_low = 0xdeadbeef01020304;
+  const uint64_t expected_high = 0x05060708deadbeef;
+  ASSERT_TRUE(result);
+  EXPECT_EQ(expected_low, result->low());
+  EXPECT_EQ(expected_high, result->high());
 }

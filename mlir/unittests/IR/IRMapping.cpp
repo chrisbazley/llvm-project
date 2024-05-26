@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
 
 using namespace mlir;
 
@@ -32,7 +33,7 @@ TEST(IRMapping, TypedValue) {
 
   IRMapping mapping;
   mapping.map(i64Val, f64Val);
-  TypedValue<IntegerType> typedI64Val = i64Val;
+  auto typedI64Val = cast<TypedValue<IntegerType>>(i64Val);
   EXPECT_EQ(mapping.lookup(typedI64Val), f64Val);
 }
 

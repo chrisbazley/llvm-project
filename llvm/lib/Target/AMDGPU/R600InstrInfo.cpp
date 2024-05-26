@@ -207,11 +207,11 @@ bool R600InstrInfo::mustBeLastInClause(unsigned Opcode) const {
 }
 
 bool R600InstrInfo::usesAddressRegister(MachineInstr &MI) const {
-  return MI.findRegisterUseOperandIdx(R600::AR_X, false, &RI) != -1;
+  return MI.findRegisterUseOperandIdx(R600::AR_X, &RI, false) != -1;
 }
 
 bool R600InstrInfo::definesAddressRegister(MachineInstr &MI) const {
-  return MI.findRegisterDefOperandIdx(R600::AR_X, false, false, &RI) != -1;
+  return MI.findRegisterDefOperandIdx(R600::AR_X, &RI, false, false) != -1;
 }
 
 bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
@@ -328,7 +328,7 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
     if (Reg == R600::OQAP) {
       Result.push_back(std::pair(Index, 0U));
     }
-    if (PV.find(Reg) != PV.end()) {
+    if (PV.contains(Reg)) {
       // 255 is used to tells its a PS/PV reg
       Result.push_back(std::pair(255, 0U));
       continue;

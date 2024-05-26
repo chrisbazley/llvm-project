@@ -297,7 +297,7 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     Type *WiderType = SE.getWiderType(Stride->getType(), TripCount->getType());
     const SCEV *CacheLineSize = SE.getConstant(WiderType, CLS);
     Stride = SE.getNoopOrAnyExtend(Stride, WiderType);
-    TripCount = SE.getNoopOrAnyExtend(TripCount, WiderType);
+    TripCount = SE.getNoopOrZeroExtend(TripCount, WiderType);
     const SCEV *Numerator = SE.getMulExpr(Stride, TripCount);
     RefCost = SE.getUDivExpr(Numerator, CacheLineSize);
 
@@ -315,7 +315,7 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     RefCost = TripCount;
 
     int Index = getSubscriptIndex(L);
-    assert(Index >= 0 && "Cound not locate a valid Index");
+    assert(Index >= 0 && "Could not locate a valid Index");
 
     for (unsigned I = Index + 1; I < getNumSubscripts() - 1; ++I) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(getSubscript(I));
@@ -323,8 +323,8 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
       const SCEV *TripCount =
           computeTripCount(*AR->getLoop(), *Sizes.back(), SE);
       Type *WiderType = SE.getWiderType(RefCost->getType(), TripCount->getType());
-      RefCost = SE.getMulExpr(SE.getNoopOrAnyExtend(RefCost, WiderType),
-                              SE.getNoopOrAnyExtend(TripCount, WiderType));
+      RefCost = SE.getMulExpr(SE.getNoopOrZeroExtend(RefCost, WiderType),
+                              SE.getNoopOrZeroExtend(TripCount, WiderType));
     }
 
     LLVM_DEBUG(dbgs().indent(4)
@@ -334,7 +334,7 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
 
   // Attempt to fold RefCost into a constant.
   if (auto ConstantCost = dyn_cast<SCEVConstant>(RefCost))
-    return ConstantCost->getValue()->getSExtValue();
+    return ConstantCost->getValue()->getZExtValue();
 
   LLVM_DEBUG(dbgs().indent(4)
              << "RefCost is not a constant! Setting to RefCost=InvalidCost "

@@ -70,6 +70,7 @@ enum class LinalgOperandDefKind {
   IndexAttr,
   UnaryFnAttr,
   BinaryFnAttr,
+  TernaryFnAttr,
   TypeFnAttr
 };
 
@@ -94,7 +95,7 @@ struct LinalgIndexingMapsConfig {
 
 struct ScalarExpression;
 
-enum class ScalarFnKind { Unary, Binary, Type };
+enum class ScalarFnKind { Unary, Binary, Ternary, Type };
 
 struct ScalarFn {
   ScalarFnKind kind;
@@ -214,6 +215,7 @@ struct ScalarEnumerationTraits<LinalgOperandDefKind> {
     io.enumCase(value, "index_attr", LinalgOperandDefKind::IndexAttr);
     io.enumCase(value, "unary_fn_attr", LinalgOperandDefKind::UnaryFnAttr);
     io.enumCase(value, "binary_fn_attr", LinalgOperandDefKind::BinaryFnAttr);
+    io.enumCase(value, "ternary_fn_attr", LinalgOperandDefKind::TernaryFnAttr);
     io.enumCase(value, "type_fn_attr", LinalgOperandDefKind::TypeFnAttr);
   }
 };
@@ -284,6 +286,7 @@ struct ScalarEnumerationTraits<ScalarFnKind> {
   static void enumeration(IO &io, ScalarFnKind &value) {
     io.enumCase(value, "unary", ScalarFnKind::Unary);
     io.enumCase(value, "binary", ScalarFnKind::Binary);
+    io.enumCase(value, "ternary", ScalarFnKind::Ternary);
     io.enumCase(value, "type", ScalarFnKind::Type);
   }
 };
@@ -317,10 +320,10 @@ struct ScalarTraits<SerializedAffineMap> {
                          SerializedAffineMap &value) {
     assert(rawYamlContext);
     auto *yamlContext = static_cast<LinalgYAMLContext *>(rawYamlContext);
-    if (auto attr = mlir::parseAttribute(scalar, yamlContext->mlirContext)
-                        .dyn_cast_or_null<AffineMapAttr>())
+    if (auto attr = dyn_cast_or_null<AffineMapAttr>(
+            mlir::parseAttribute(scalar, yamlContext->mlirContext)))
       value.affineMapAttr = attr;
-    else if (!value.affineMapAttr || !value.affineMapAttr.isa<AffineMapAttr>())
+    else if (!value.affineMapAttr || !isa<AffineMapAttr>(value.affineMapAttr))
       return "could not parse as an affine map attribute";
     return StringRef();
   }
@@ -378,7 +381,7 @@ static std::string generateCppExpression(SerializedAffineMap self,
   printedSs.flush();
 
   static const char exprFormat[] =
-      R"FMT(mlir::parseAttribute("{0}", {1}).cast<AffineMapAttr>().getValue())FMT";
+      R"FMT(llvm::cast<AffineMapAttr>(mlir::parseAttribute("{0}", {1})).getValue())FMT";
   return llvm::formatv(exprFormat, printedStr, contextName);
 }
 
@@ -441,6 +444,7 @@ static ScalarAssign *findAssignment(StringRef name,
 static bool isFunctionAttribute(LinalgOperandDefKind kind) {
   return kind == LinalgOperandDefKind::UnaryFnAttr ||
          kind == LinalgOperandDefKind::BinaryFnAttr ||
+         kind == LinalgOperandDefKind::TernaryFnAttr ||
          kind == LinalgOperandDefKind::TypeFnAttr;
 }
 
@@ -456,6 +460,8 @@ std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
     return std::string("UnaryFn");
   case LinalgOperandDefKind::BinaryFnAttr:
     return std::string("BinaryFn");
+  case LinalgOperandDefKind::TernaryFnAttr:
+    return std::string("TernaryFn");
   case LinalgOperandDefKind::TypeFnAttr:
     return std::string("TypeFn");
   default:
@@ -471,6 +477,8 @@ std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
     return std::string("UnaryFn");
   case ScalarFnKind::Binary:
     return std::string("BinaryFn");
+  case ScalarFnKind::Ternary:
+    return std::string("TernaryFn");
   case ScalarFnKind::Type:
     return std::string("TypeFn");
   }
@@ -563,9 +571,8 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
         return regionBuilder;
       }
 
-      std::pair<int64_t, int64_t> getDpsInitsPositionRange() {{
-        int64_t getNumOperands = this->getNumOperands();
-        return {{getNumOperands - 1, getNumOperands};
+      ::mlir::MutableOperandRange getDpsInitsMutable() {{
+        return getOutputsMutable();
       }
 
       // Generic methods.
@@ -659,9 +666,9 @@ LogicalResult {0}::fold(FoldAdaptor,
 }
 void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
-      if (hasTensorSemantics()) return;
+      if (hasPureTensorSemantics()) return;
       getGenericEffectsImpl(effects,
-        getOperation()->getResults(), getDpsInputOperands(), getDpsInitOperands());
+        getOperation()->getResults(), getDpsInputs(), getDpsInits());
 }
 )FMT";
 
@@ -693,14 +700,13 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
   std::string doc;
   if (opConfig.metadata->doc) {
     static const char structuredOpDocFmt[] = R"FMT(
-  let summary = [{ {0} }];
-  let description = [{
-    {1}
-  }];
+  let summary = [{{{0}}];
+  let description = [{{{1}}];
 )FMT";
     StringRef summary, description;
     std::tie(summary, description) =
-        StringRef(*opConfig.metadata->doc).trim().split('\n');
+        StringRef(*opConfig.metadata->doc).trim().split("\n\n");
+
     doc = llvm::formatv(structuredOpDocFmt, summary.trim(), description.trim());
   }
 
@@ -869,14 +875,14 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
           if (arg.kind != LinalgOperandDefKind::IndexAttr)
             continue;
           assert(arg.indexAttrMap);
-          for (auto &en :
+          for (auto [idx, result] :
                llvm::enumerate(arg.indexAttrMap->affineMap().getResults())) {
-            if (auto symbol = en.value().dyn_cast<AffineSymbolExpr>()) {
+            if (auto symbol = dyn_cast<AffineSymbolExpr>(result)) {
               std::string argName = arg.name;
               argName[0] = toupper(argName[0]);
               symbolBindings[symbol.getPosition()] =
                   llvm::formatv(structuredOpAccessAttrFormat, argName,
-                                symbol.getPosition(), en.index());
+                                symbol.getPosition(), idx);
             }
           }
         }
@@ -1010,7 +1016,7 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
                         Block &block, ArrayRef<NamedAttribute> attrs) {{
   assert({1} > 0 && block.getNumArguments() == {1} &&
          "{0} regionBuilder expects {1} (>=0) args");
-  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
+  RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
   {2}
   {3}
@@ -1031,13 +1037,13 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
       // {1}: attribute name
       // {2}: default type function name
       static const char attrDef[] = R"FMT(
-{0} {1}Val = {0}::{2};
-auto {1}Iter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {{
-                              return attr.getName() == "{1}"; });
-if ({1}Iter != attrs.end()) {{
-  if (auto attr = {1}Iter->getValue().dyn_cast<{0}Attr>())
-    {1}Val = attr.getValue();
-}
+  {0} {1}Val = {0}::{2};
+  auto {1}Iter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {{
+                                return attr.getName() == "{1}"; });
+  if ({1}Iter != attrs.end()) {{
+    if (auto attr = llvm::dyn_cast<{0}Attr>({1}Iter->getValue()))
+      {1}Val = attr.getValue();
+  }
 )FMT";
       std::string enumName = convertOperandKindToEnumName(arg.kind);
       attrs.push_back(

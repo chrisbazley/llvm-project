@@ -29,9 +29,7 @@ using namespace llvm;
 static bool isAligned(const Value *Base, const APInt &Offset, Align Alignment,
                       const DataLayout &DL) {
   Align BA = Base->getPointerAlignment(DL);
-  const APInt APAlign(Offset.getBitWidth(), Alignment.value());
-  assert(APAlign.isPowerOf2() && "must be a power of 2!");
-  return BA >= Alignment && !(Offset & (APAlign - 1));
+  return BA >= Alignment && Offset.isAligned(BA);
 }
 
 /// Test if V is always a pointer to allocated and suitably aligned memory for
@@ -101,7 +99,8 @@ static bool isDereferenceableAndAlignedPointer(
                                                           CheckForFreed));
   if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
       !CheckForFreed)
-    if (!CheckForNonNull || isKnownNonZero(V, DL, 0, AC, CtxI, DT)) {
+    if (!CheckForNonNull ||
+        isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI))) {
       // As we recursed through GEPs to get here, we've incrementally checked
       // that each step advanced by a multiple of the alignment. If our base is
       // properly aligned, then the original offset accessed must also be.
@@ -135,7 +134,8 @@ static bool isDereferenceableAndAlignedPointer(
     if (getObjectSize(V, ObjSize, DL, TLI, Opts)) {
       APInt KnownDerefBytes(Size.getBitWidth(), ObjSize);
       if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
-          isKnownNonZero(V, DL, 0, AC, CtxI, DT) && !V->canBeFreed()) {
+          isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)) &&
+          !V->canBeFreed()) {
         // As we recursed through GEPs to get here, we've incrementally
         // checked that each step advanced by a multiple of the alignment. If
         // our base is properly aligned, then the original offset accessed
@@ -204,7 +204,7 @@ bool llvm::isDereferenceableAndAlignedPointer(
     const TargetLibraryInfo *TLI) {
   // For unsized types or scalable vectors we don't know exactly how many bytes
   // are dereferenced, so bail out.
-  if (!Ty->isSized() || isa<ScalableVectorType>(Ty))
+  if (!Ty->isSized() || Ty->isScalableTy())
     return false;
 
   // When dereferenceability information is provided by a dereferenceable
@@ -286,21 +286,48 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
   auto* Step = dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(SE));
   if (!Step)
     return false;
-  // TODO: generalize to access patterns which have gaps
-  if (Step->getAPInt() != EltSize)
-    return false;
 
   auto TC = SE.getSmallConstantMaxTripCount(L);
   if (!TC)
     return false;
 
-  const APInt AccessSize = TC * EltSize;
-
-  auto *StartS = dyn_cast<SCEVUnknown>(AddRec->getStart());
-  if (!StartS)
+  // TODO: Handle overlapping accesses.
+  // We should be computing AccessSize as (TC - 1) * Step + EltSize.
+  if (EltSize.sgt(Step->getAPInt()))
     return false;
-  assert(SE.isLoopInvariant(StartS, L) && "implied by addrec definition");
-  Value *Base = StartS->getValue();
+
+  // Compute the total access size for access patterns with unit stride and
+  // patterns with gaps. For patterns with unit stride, Step and EltSize are the
+  // same.
+  // For patterns with gaps (i.e. non unit stride), we are
+  // accessing EltSize bytes at every Step.
+  APInt AccessSize = TC * Step->getAPInt();
+
+  assert(SE.isLoopInvariant(AddRec->getStart(), L) &&
+         "implied by addrec definition");
+  Value *Base = nullptr;
+  if (auto *StartS = dyn_cast<SCEVUnknown>(AddRec->getStart())) {
+    Base = StartS->getValue();
+  } else if (auto *StartS = dyn_cast<SCEVAddExpr>(AddRec->getStart())) {
+    // Handle (NewBase + offset) as start value.
+    const auto *Offset = dyn_cast<SCEVConstant>(StartS->getOperand(0));
+    const auto *NewBase = dyn_cast<SCEVUnknown>(StartS->getOperand(1));
+    if (StartS->getNumOperands() == 2 && Offset && NewBase) {
+      // For the moment, restrict ourselves to the case where the offset is a
+      // multiple of the requested alignment and the base is aligned.
+      // TODO: generalize if a case found which warrants
+      if (Offset->getAPInt().urem(Alignment.value()) != 0)
+        return false;
+      Base = NewBase->getValue();
+      bool Overflow = false;
+      AccessSize = AccessSize.uadd_ov(Offset->getAPInt(), Overflow);
+      if (Overflow)
+        return false;
+    }
+  }
+
+  if (!Base)
+    return false;
 
   // For the moment, restrict ourselves to the case where the access size is a
   // multiple of the requested alignment and the base is aligned.
@@ -339,7 +366,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
 
   if (Size.getBitWidth() > 64)
     return false;
-  const uint64_t LoadSize = Size.getZExtValue();
+  const TypeSize LoadSize = TypeSize::getFixed(Size.getZExtValue());
 
   // Otherwise, be a little bit aggressive by scanning the local block where we
   // want to check to see if the pointer is already being loaded or stored
@@ -389,11 +416,11 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
 
     // Handle trivial cases.
     if (AccessedPtr == V &&
-        LoadSize <= DL.getTypeStoreSize(AccessedTy))
+        TypeSize::isKnownLE(LoadSize, DL.getTypeStoreSize(AccessedTy)))
       return true;
 
     if (AreEquivalentAddressValues(AccessedPtr->stripPointerCasts(), V) &&
-        LoadSize <= DL.getTypeStoreSize(AccessedTy))
+        TypeSize::isKnownLE(LoadSize, DL.getTypeStoreSize(AccessedTy)))
       return true;
   }
   return false;
@@ -425,11 +452,10 @@ llvm::DefMaxInstsToScan("available-load-scan-limit", cl::init(6), cl::Hidden,
            "to scan backward from a given instruction, when searching for "
            "available loaded value"));
 
-Value *llvm::FindAvailableLoadedValue(LoadInst *Load,
-                                      BasicBlock *ScanBB,
+Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
                                       BasicBlock::iterator &ScanFrom,
                                       unsigned MaxInstsToScan,
-                                      AAResults *AA, bool *IsLoad,
+                                      BatchAAResults *AA, bool *IsLoad,
                                       unsigned *NumScanedInst) {
   // Don't CSE load that is volatile or anything stronger than unordered.
   if (!Load->isUnordered())
@@ -558,7 +584,7 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
 Value *llvm::findAvailablePtrLoadStore(
     const MemoryLocation &Loc, Type *AccessTy, bool AtLeastAtomic,
     BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom, unsigned MaxInstsToScan,
-    AAResults *AA, bool *IsLoadCSE, unsigned *NumScanedInst) {
+    BatchAAResults *AA, bool *IsLoadCSE, unsigned *NumScanedInst) {
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
 
@@ -639,7 +665,7 @@ Value *llvm::findAvailablePtrLoadStore(
   return nullptr;
 }
 
-Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
+Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
                                       bool *IsLoadCSE,
                                       unsigned MaxInstsToScan) {
   const DataLayout &DL = Load->getModule()->getDataLayout();
@@ -653,7 +679,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
 
   // Try to find an available value first, and delay expensive alias analysis
   // queries until later.
-  Value *Available = nullptr;;
+  Value *Available = nullptr;
   SmallVector<Instruction *> MustNotAliasInsts;
   for (Instruction &Inst : make_range(++Load->getReverseIterator(),
                                       ScanBB->rend())) {
@@ -684,22 +710,62 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
   return Available;
 }
 
-bool llvm::canReplacePointersIfEqual(Value *A, Value *B, const DataLayout &DL,
-                                     Instruction *CtxI) {
-  Type *Ty = A->getType();
-  assert(Ty == B->getType() && Ty->isPointerTy() &&
-         "values must have matching pointer types");
+// Returns true if a use is either in an ICmp/PtrToInt or a Phi/Select that only
+// feeds into them.
+static bool isPointerUseReplacable(const Use &U) {
+  unsigned Limit = 40;
+  SmallVector<const User *> Worklist({U.getUser()});
+  SmallPtrSet<const User *, 8> Visited;
 
-  // NOTE: The checks in the function are incomplete and currently miss illegal
-  // cases! The current implementation is a starting point and the
-  // implementation should be made stricter over time.
-  if (auto *C = dyn_cast<Constant>(B)) {
-    // Do not allow replacing a pointer with a constant pointer, unless it is
-    // either null or at least one byte is dereferenceable.
-    APInt OneByte(DL.getPointerTypeSizeInBits(Ty), 1);
-    return C->isNullValue() ||
-           isDereferenceableAndAlignedPointer(B, Align(1), OneByte, DL, CtxI);
+  while (!Worklist.empty() && --Limit) {
+    auto *User = Worklist.pop_back_val();
+    if (!Visited.insert(User).second)
+      continue;
+    if (isa<ICmpInst, PtrToIntInst>(User))
+      continue;
+    if (isa<PHINode, SelectInst>(User))
+      Worklist.append(User->user_begin(), User->user_end());
+    else
+      return false;
   }
 
-  return true;
+  return Limit != 0;
+}
+
+// Returns true if `To` is a null pointer, constant dereferenceable pointer or
+// both pointers have the same underlying objects.
+static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
+                                       const DataLayout &DL) {
+  // This is not strictly correct, but we do it for now to retain important
+  // optimizations.
+  if (isa<ConstantPointerNull>(To))
+    return true;
+  if (isa<Constant>(To) &&
+      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
+    return true;
+  if (getUnderlyingObject(From) == getUnderlyingObject(To))
+    return true;
+  return false;
+}
+
+bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
+                                          const DataLayout &DL) {
+  assert(U->getType() == To->getType() && "values must have matching types");
+  // Not a pointer, just return true.
+  if (!To->getType()->isPointerTy())
+    return true;
+
+  if (isPointerAlwaysReplaceable(&*U, To, DL))
+    return true;
+  return isPointerUseReplacable(U);
+}
+
+bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
+                                     const DataLayout &DL) {
+  assert(From->getType() == To->getType() && "values must have matching types");
+  // Not a pointer, just return true.
+  if (!From->getType()->isPointerTy())
+    return true;
+
+  return isPointerAlwaysReplaceable(From, To, DL);
 }

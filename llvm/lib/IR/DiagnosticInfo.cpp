@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -178,8 +179,12 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
   else if (isa<Constant>(V)) {
     raw_string_ostream OS(Val);
     V->printAsOperand(OS, /*PrintType=*/false);
-  } else if (auto *I = dyn_cast<Instruction>(V))
+  } else if (auto *I = dyn_cast<Instruction>(V)) {
     Val = I->getOpcodeName();
+  } else if (auto *MD = dyn_cast<MetadataAsValue>(V)) {
+    if (auto *S = dyn_cast<MDString>(MD->getMetadata()))
+      Val = S->getString();
+  }
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Type *T)
@@ -440,7 +445,7 @@ void llvm::diagnoseDontCall(const CallInst &CI) {
 }
 
 void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
-  DP << "call to " << getFunctionName() << " marked \"dontcall-";
+  DP << "call to " << demangle(getFunctionName()) << " marked \"dontcall-";
   if (getSeverity() == DiagnosticSeverity::DS_Error)
     DP << "error\"";
   else

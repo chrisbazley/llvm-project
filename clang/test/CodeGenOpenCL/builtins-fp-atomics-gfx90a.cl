@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a \
-// RUN:   %s -S -emit-llvm -o - | FileCheck %s -check-prefix=CHECK
+// RUN:   %s -emit-llvm -o - | FileCheck %s -check-prefix=CHECK
 
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX90A %s
@@ -114,4 +114,10 @@ void test_ds_add_local_f64(__local double *addr, double x){
 void test_ds_addf_local_f32(__local float *addr, float x){
   float *rtn;
   *rtn = __builtin_amdgcn_ds_atomic_fadd_f32(addr, x);
+}
+
+// CHECK-LABEL: @test_global_add_f32
+// CHECK: call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %{{.*}}, float %{{.*}})
+void test_global_add_f32(float *rtn, global float *addr, float x) {
+  *rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
 }

@@ -358,10 +358,24 @@ macro(construct_compiler_rt_default_triple)
     if(DEFINED COMPILER_RT_DEFAULT_TARGET_TRIPLE)
       message(FATAL_ERROR "COMPILER_RT_DEFAULT_TARGET_TRIPLE isn't supported when building for default target only")
     endif()
+    if ("${CMAKE_C_COMPILER_TARGET}" STREQUAL "")
+      message(FATAL_ERROR "CMAKE_C_COMPILER_TARGET must also be set when COMPILER_RT_DEFAULT_TARGET_ONLY is ON")
+    endif()
+    message(STATUS "cmake c compiler target: ${CMAKE_C_COMPILER_TARGET}")
     set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${CMAKE_C_COMPILER_TARGET})
   else()
     set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${LLVM_TARGET_TRIPLE} CACHE STRING
           "Default triple for which compiler-rt runtimes will be built.")
+  endif()
+
+  if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+    set(option_prefix "")
+    if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+      set(option_prefix "/clang:")
+    endif()
+    execute_process(COMMAND ${CMAKE_C_COMPILER} ${option_prefix}--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple
+                    OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
   endif()
 
   string(REPLACE "-" ";" LLVM_TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
@@ -433,6 +447,25 @@ function(get_compiler_rt_target arch variable)
     string(REGEX REPLACE "mipsisa64" "mipsisa32" triple_cpu_mips "${triple_cpu}")
     string(REGEX REPLACE "mips64" "mips" triple_cpu_mips "${triple_cpu_mips}")
     set(target "${triple_cpu_mips}${triple_suffix_gnu}")
+  elseif("${arch}" MATCHES "^arm")
+    # Arch is arm, armhf, armv6m (anything else would come from using
+    # COMPILER_RT_DEFAULT_TARGET_ONLY, which is checked above).
+    if (${arch} STREQUAL "armhf")
+      # If we are building for hard float but our ABI is soft float.
+      if ("${triple_suffix}" MATCHES ".*eabi$")
+        # Change "eabi" -> "eabihf"
+        set(triple_suffix "${triple_suffix}hf")
+      endif()
+      # ABI is already set in the triple, don't repeat it in the architecture.
+      set(arch "arm")
+    else ()
+      # If we are building for soft float, but the triple's ABI is hard float.
+      if ("${triple_suffix}" MATCHES ".*eabihf$")
+        # Change "eabihf" -> "eabi"
+        string(REGEX REPLACE "hf$" "" triple_suffix "${triple_suffix}")
+      endif()
+    endif()
+    set(target "${arch}${triple_suffix}")
   else()
     set(target "${arch}${triple_suffix}")
   endif()
@@ -560,7 +593,8 @@ function(add_security_warnings out_flags macosx_sdk_version)
   append_list_if(COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG -Werror=return-stack-address flags)
   append_list_if(COMPILER_RT_HAS_SIZEOF_ARRAY_DECAY_FLAG -Werror=sizeof-array-decay flags)
   append_list_if(COMPILER_RT_HAS_FORMAT_INSUFFICIENT_ARGS_FLAG -Werror=format-insufficient-args flags)
-  append_list_if(COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG -Werror=format-security flags)
+  # GCC complains if we pass -Werror=format-security without -Wformat
+  append_list_if(COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG -Wformat -Werror=format-security flags)
   append_list_if(COMPILER_RT_HAS_SIZEOF_ARRAY_DIV_FLAG -Werror=sizeof-array-div)
   append_list_if(COMPILER_RT_HAS_SIZEOF_POINTER_DIV_FLAG -Werror=sizeof-pointer-div)
 

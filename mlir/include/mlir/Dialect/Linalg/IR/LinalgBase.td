@@ -37,7 +37,7 @@ def Linalg_Dialect : Dialect {
   let cppNamespace = "::mlir::linalg";
   let dependentDialects = [
     "arith::ArithDialect",
-    "AffineDialect",
+    "affine::AffineDialect",
     "math::MathDialect",
     "memref::MemRefDialect",
     "tensor::TensorDialect",
@@ -46,9 +46,8 @@ def Linalg_Dialect : Dialect {
   let hasCanonicalizer = 1;
   let hasOperationAttrVerify = 1;
   let hasConstantMaterializer = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
   let extraClassDeclaration = [{
-    /// Attribute name used to to memoize indexing maps for named ops.
+    /// Attribute name used to memoize indexing maps for named ops.
     constexpr const static ::llvm::StringLiteral
         kMemoizedIndexingMapsAttrName = "linalg.memoized_indexing_maps";
 
@@ -67,6 +66,9 @@ def UnaryFnAttr : EnumAttr<Linalg_Dialect, UnaryFn, "unary_fn"> {
   let assemblyFormat = "`<` $value `>`";
 }
 def BinaryFnAttr : EnumAttr<Linalg_Dialect, BinaryFn, "binary_fn"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+def TernaryFnAttr : EnumAttr<Linalg_Dialect, TernaryFn, "ternary_fn"> {
   let assemblyFormat = "`<` $value `>`";
 }
 def TypeFnAttr : EnumAttr<Linalg_Dialect, TypeFn, "type_fn"> {

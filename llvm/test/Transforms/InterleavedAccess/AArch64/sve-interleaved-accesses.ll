@@ -1,4 +1,5 @@
 ; RUN: opt < %s -interleaved-access -S | FileCheck %s
+; RUN: opt < %s -passes=interleaved-access -S | FileCheck %s
 
 target triple = "aarch64-linux-gnu"
 
@@ -436,7 +437,7 @@ define void @store_double_factor4(ptr %ptr, <4 x double> %v0, <4 x double> %v1, 
 define void @store_float_factor3(ptr %ptr, <8 x float> %v0, <8 x float> %v1, <8 x float> %v2) #0 {
 ; CHECK-LABEL: @store_float_factor3(
 ; CHECK-NEXT:    [[S0:%.*]] = shufflevector <8 x float> [[V0:%.*]], <8 x float> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x float> [[V2:%.*]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x float> [[V2:%.*]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x float> [[S0]], <16 x float> [[S1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v8f32(<vscale x 4 x float> undef, <8 x float> [[TMP2]], i64 0)
@@ -488,6 +489,30 @@ define void @store_bfloat_factor2(ptr %ptr, <16 x bfloat> %v0, <16 x bfloat> %v1
   i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
   store <32 x bfloat> %interleaved.vec, ptr %ptr, align 4
   ret void
+}
+
+; Ensure vscale_range property does not affect scalable vector types.
+define { <vscale x 4 x double>, <vscale x 4 x double> } @deinterleave_nxptr_factor2(ptr %ptr) #2 {
+; CHECK-LABEL: define { <vscale x 4 x double>, <vscale x 4 x double> } @deinterleave_nxptr_factor2(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 2 x double>, ptr [[PTR]], i64 0
+; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld2.sret.nxv2f64(<vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[LDN1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[LDN1]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP4]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <vscale x 2 x double>, ptr [[PTR]], i64 2
+; CHECK-NEXT:    [[LDN2:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld2.sret.nxv2f64(<vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP6]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[LDN2]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP3]], <vscale x 2 x double> [[TMP7]], i64 2)
+; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[LDN2]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP5]], <vscale x 2 x double> [[TMP9]], i64 2)
+; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { <vscale x 4 x double>, <vscale x 4 x double> } poison, <vscale x 4 x double> [[TMP8]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP11]], <vscale x 4 x double> [[TMP10]], 1
+; CHECK-NEXT:    ret { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP12]]
+;
+  %wide.vec = load <vscale x 8 x double>, ptr %ptr, align 8
+  %ldN = tail call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.vector.deinterleave2.nxv8f64(<vscale x 8 x double> %wide.vec)
+  ret { <vscale x 4 x double>, <vscale x 4 x double> } %ldN
 }
 
 attributes #0 = { vscale_range(2,2) "target-features"="+sve" }

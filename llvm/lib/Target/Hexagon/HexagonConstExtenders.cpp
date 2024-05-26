@@ -1388,11 +1388,10 @@ void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
       break;
 
     // Find the best candidate with respect to the number of extenders covered.
-    auto BestIt = std::max_element(Counts.begin(), Counts.end(),
-                    [](const CMap::value_type &A, const CMap::value_type &B) {
-                      return A.second < B.second ||
-                             (A.second == B.second && A < B);
-                    });
+    auto BestIt = llvm::max_element(
+        Counts, [](const CMap::value_type &A, const CMap::value_type &B) {
+          return A.second < B.second || (A.second == B.second && A < B);
+        });
     int32_t Best = BestIt->first;
     ExtValue BestV(ER, Best);
     for (RangeTree::Node *N : Tree.nodesWith(Best)) {
@@ -1745,7 +1744,7 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
       // "alignment" as Diff.
       uint32_t UD = Diff;
       OffsetRange R = getOffsetRange(MI.getOperand(0));
-      uint32_t A = std::min<uint32_t>(R.Align, 1u << countTrailingZeros(UD));
+      uint32_t A = std::min<uint32_t>(R.Align, 1u << llvm::countr_zero(UD));
       D &= ~(A-1);
     }
     BuildMI(MBB, At, dl, HII->get(IdxOpc))
