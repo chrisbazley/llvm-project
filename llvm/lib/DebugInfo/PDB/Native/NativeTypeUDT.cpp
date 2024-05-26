@@ -69,6 +69,7 @@ void NativeTypeUDT::dump(raw_ostream &OS, int Indent,
   dumpSymbolField(OS, "unalignedType", isUnalignedType(), Indent);
   dumpSymbolField(OS, "isValueUdt", isValueUdt(), Indent);
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
+  dumpSymbolField(OS, "optionalType", isOptionalType(), Indent);
 }
 
 std::string NativeTypeUDT::getName() const {
@@ -217,5 +218,12 @@ bool NativeTypeUDT::isVolatileType() const {
   if (!Modifiers)
     return false;
   return (Modifiers->Modifiers & ModifierOptions::Volatile) !=
+         ModifierOptions::None;
+}
+
+bool NativeTypeUDT::isOptionalType() const {
+  if (!Modifiers)
+    return false;
+  return (Modifiers->Modifiers & ModifierOptions::Optional) !=
          ModifierOptions::None;
 }

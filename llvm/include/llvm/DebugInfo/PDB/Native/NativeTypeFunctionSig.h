@@ -49,6 +49,7 @@ public:
   bool isCxxReturnUdt() const override;
   bool isUnalignedType() const override;
   bool isVolatileType() const override;
+  bool isOptionalType() const override;
 
 private:
   void initializeArgList(codeview::TypeIndex ArgListTI);

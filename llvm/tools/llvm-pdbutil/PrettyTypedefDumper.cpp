@@ -57,6 +57,8 @@ void TypedefDumper::dump(const PDBSymbolTypePointer &Symbol) {
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "const ";
   if (Symbol.isVolatileType())
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
+  if (Symbol.isOptionalType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "_Optional ";
   auto PointeeType = Symbol.getPointeeType();
   if (auto FuncSig = unique_dyn_cast<PDBSymbolTypeFunctionSig>(PointeeType)) {
     FunctionDumper::PointerType Pointer = FunctionDumper::PointerType::Pointer;

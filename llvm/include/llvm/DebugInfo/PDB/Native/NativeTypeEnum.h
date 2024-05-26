@@ -47,6 +47,7 @@ public:
   std::string getName() const override;
   bool isConstType() const override;
   bool isVolatileType() const override;
+  bool isOptionalType() const override;
   bool isUnalignedType() const override;
   bool isNested() const override;
   bool hasOverloadedOperator() const override;

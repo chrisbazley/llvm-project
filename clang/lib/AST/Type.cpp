@@ -1534,6 +1534,16 @@ QualType QualType::getAtomicUnqualifiedType() const {
   return getUnqualifiedType();
 }
 
+std::optional<NullabilityKind> QualType::getNullability() const {
+  if (const PointerType *PT = getTypePtr()->getAs<PointerType>()) {
+    auto PointeeType = PT->getPointeeType();
+    if (PointeeType.isOptionalQualified()) {
+      return NullabilityKind::Nullable;
+    }
+  }
+  return getTypePtr()->getNullability();
+}
+
 std::optional<ArrayRef<QualType>>
 Type::getObjCSubstitutions(const DeclContext *dc) const {
   // Look through method scopes.

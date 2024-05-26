@@ -1708,9 +1708,10 @@ void CXXNameMangler::mangleNestedName(GlobalDecl GD,
   Out << 'N';
   if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(ND)) {
     Qualifiers MethodQuals = Method->getMethodQualifiers();
-    // We do not consider restrict a distinguishing attribute for overloading
+    // We do not consider restrict or _Optional a distinguishing attribute for overloading
     // purposes so we must not mangle it.
     MethodQuals.removeRestrict();
+    MethodQuals.removeOptional();
     mangleQualifiers(MethodQuals);
     mangleRefQualifier(Method->getRefQualifier());
   }

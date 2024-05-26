@@ -600,7 +600,7 @@ public:
   }
 
   bool canBePointerOrReferenceQualifier() const {
-    return isOneOf(tok::kw_const, tok::kw_restrict, tok::kw_volatile,
+    return isOneOf(tok::kw_const, tok::kw_restrict, tok::kw_volatile, tok::kw__Optional,
                    tok::kw___attribute, tok::kw__Nonnull, tok::kw__Nullable,
                    tok::kw__Null_unspecified, tok::kw___ptr32, tok::kw___ptr64,
                    TT_AttributeMacro);
@@ -762,7 +762,7 @@ public:
     const FormatToken *T = this;
     do {
       T = T->getPreviousNonComment();
-    } while (T && T->isOneOf(tok::kw_const, tok::kw_volatile, tok::amp,
+    } while (T && T->isOneOf(tok::kw_const, tok::kw_volatile, tok::kw__Optional, tok::amp,
                              tok::ampamp));
     return T && T->is(tok::kw_auto);
   }

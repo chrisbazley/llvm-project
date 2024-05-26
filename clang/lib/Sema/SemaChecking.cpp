@@ -5636,7 +5636,7 @@ bool Sema::getFormatStringInfo(const FormatAttr *Format, bool IsCXXMember,
 /// Returns true if the value evaluates to null.
 static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
   // If the expression has non-null type, it doesn't evaluate to null.
-  if (auto nullability = Expr->IgnoreImplicit()->getType()->getNullability()) {
+  if (auto nullability = Expr->IgnoreImplicit()->getType().getNullability()) {
     if (*nullability == NullabilityKind::NonNull)
       return false;
   }
@@ -5721,7 +5721,7 @@ DiagnoseCStringFormatDirectiveInCFAPI(Sema &S,
 
 /// Determine whether the given type has a non-null nullability annotation.
 static bool isNonNullType(QualType type) {
-  if (auto nullability = type->getNullability())
+  if (auto nullability = type.getNullability())
     return *nullability == NullabilityKind::NonNull;
 
   return false;

@@ -593,7 +593,7 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       BoxedType = NSStringPointer;
       // Transfer the nullability from method's return type.
       std::optional<NullabilityKind> Nullability =
-          BoxingMethod->getReturnType()->getNullability();
+          BoxingMethod->getReturnType().getNullability();
       if (Nullability)
         BoxedType = Context.getAttributedType(
             AttributedType::getNullabilityAttrKind(*Nullability), BoxedType,
@@ -1465,7 +1465,7 @@ static QualType getBaseMessageSendResultType(Sema &S,
   auto transferNullability = [&](QualType type) -> QualType {
     // If the method's result type has nullability, extract it.
     if (auto nullability =
-            Method->getSendResultType(ReceiverType)->getNullability()) {
+            Method->getSendResultType(ReceiverType).getNullability()) {
       // Strip off any outer nullability sugar from the provided type.
       (void)AttributedType::stripOuterNullability(type);
 
@@ -1544,7 +1544,7 @@ QualType Sema::getMessageSendResultType(const Expr *Receiver,
         assert(MD->isClassMethod() && "expected a class method");
         QualType NewResultType = Context.getObjCObjectPointerType(
             Context.getObjCInterfaceType(MD->getClassInterface()));
-        if (auto Nullability = resultType->getNullability())
+        if (auto Nullability = resultType.getNullability())
           NewResultType = Context.getAttributedType(
               AttributedType::getNullabilityAttrKind(*Nullability),
               NewResultType, NewResultType);
@@ -1562,7 +1562,7 @@ QualType Sema::getMessageSendResultType(const Expr *Receiver,
   // Map the nullability of the result into a table index.
   unsigned receiverNullabilityIdx = 0;
   if (std::optional<NullabilityKind> nullability =
-          ReceiverType->getNullability()) {
+          ReceiverType.getNullability()) {
     if (*nullability == NullabilityKind::NullableResult)
       nullability = NullabilityKind::Nullable;
     receiverNullabilityIdx = 1 + static_cast<unsigned>(*nullability);
@@ -1570,7 +1570,7 @@ QualType Sema::getMessageSendResultType(const Expr *Receiver,
 
   unsigned resultNullabilityIdx = 0;
   if (std::optional<NullabilityKind> nullability =
-          resultType->getNullability()) {
+          resultType.getNullability()) {
     if (*nullability == NullabilityKind::NullableResult)
       nullability = NullabilityKind::Nullable;
     resultNullabilityIdx = 1 + static_cast<unsigned>(*nullability);
@@ -1603,7 +1603,7 @@ QualType Sema::getMessageSendResultType(const Expr *Receiver,
     } else {
       resultType = resultType.getDesugaredType(Context);
     }
-  } while (resultType->getNullability());
+  } while (resultType.getNullability());
 
   // Add nullability back if needed.
   if (newResultNullabilityIdx > 0) {

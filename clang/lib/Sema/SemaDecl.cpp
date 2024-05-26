@@ -3399,8 +3399,8 @@ static bool EquivalentArrayTypes(QualType Old, QualType New,
 static void mergeParamDeclTypes(ParmVarDecl *NewParam,
                                 const ParmVarDecl *OldParam,
                                 Sema &S) {
-  if (auto Oldnullability = OldParam->getType()->getNullability()) {
-    if (auto Newnullability = NewParam->getType()->getNullability()) {
+  if (auto Oldnullability = OldParam->getType().getNullability()) {
+    if (auto Newnullability = NewParam->getType().getNullability()) {
       if (*Oldnullability != *Newnullability) {
         S.Diag(NewParam->getLocation(), diag::warn_mismatched_nullability_attr)
           << DiagNullabilityKind(
@@ -5088,6 +5088,13 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       Diag(DS.getRestrictSpecLoc(),
            diag::err_typecheck_invalid_restrict_not_pointer_noarg)
            << DS.getSourceRange();
+
+    // Types other than those of a pointed-to object or pointed-to incomplete
+    // type shall not be _Optional-qualified in a declaration.
+    if (TypeQuals & DeclSpec::TQ_optional)
+      Diag(DS.getOptionalSpecLoc(),
+           diag::err_typecheck_invalid_optional_not_pointee_noarg)
+          << DS.getSourceRange();
   }
 
   if (DS.isInlineSpecified())
@@ -5281,6 +5288,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       Diag(DS.getConstSpecLoc(), DiagID) << "const";
     if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
       Diag(DS.getConstSpecLoc(), DiagID) << "volatile";
+    if (DS.getTypeQualifiers() & DeclSpec::TQ_optional)
+      Diag(DS.getConstSpecLoc(), DiagID) << "_Optional";
     // Restrict is covered above.
     if (DS.getTypeQualifiers() & DeclSpec::TQ_atomic)
       Diag(DS.getAtomicSpecLoc(), DiagID) << "_Atomic";
@@ -5537,6 +5546,11 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
              diag::ext_anonymous_struct_union_qualified)
           << Record->isUnion() << "volatile"
           << FixItHint::CreateRemoval(DS.getVolatileSpecLoc());
+      if (DS.getTypeQualifiers() & DeclSpec::TQ_optional)
+        Diag(DS.getOptionalSpecLoc(),
+             diag::ext_anonymous_struct_union_qualified)
+          << Record->isUnion() << "_Optional"
+          << FixItHint::CreateRemoval(DS.getOptionalSpecLoc());
       if (DS.getTypeQualifiers() & DeclSpec::TQ_restrict)
         Diag(DS.getRestrictSpecLoc(),
              diag::ext_anonymous_struct_union_qualified)

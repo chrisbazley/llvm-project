@@ -3391,6 +3391,7 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
   for (; Lookahead < 50; PeekNext()) {
     switch (NextToken->Tok.getKind()) {
     case tok::kw_volatile:
+    case tok::kw__Optional:
     case tok::kw_const:
     case tok::comma:
       FormatTok = Tokens->setPosition(StoredPosition);

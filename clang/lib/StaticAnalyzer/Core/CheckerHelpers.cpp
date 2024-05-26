@@ -100,7 +100,21 @@ parseAssignment(const Stmt *S) {
   return std::make_pair(VD, RHS);
 }
 
+bool pointeeIsOptional(QualType Type) {
+  if (const PointerType *PT = Type->getAs<PointerType>()) {
+    auto PointeeType = PT->getPointeeType();
+    if (PointeeType.isOptionalQualified()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 Nullability getNullabilityAnnotation(QualType Type) {
+  if (pointeeIsOptional(Type)) {
+    return Nullability::Nullable;
+  }
+
   const auto *AttrType = Type->getAs<AttributedType>();
   if (!AttrType)
     return Nullability::Unspecified;

@@ -359,7 +359,7 @@ struct PointerLikeTypeTraits<mlir::TypeID> {
   static inline mlir::TypeID getFromVoidPointer(void *ptr) {
     return mlir::TypeID::getFromOpaquePointer(ptr);
   }
-  static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 4;
 };
 
 } // namespace llvm

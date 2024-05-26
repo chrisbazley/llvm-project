@@ -32,7 +32,7 @@ namespace {
 
 class CallAndMessageChecker
     : public Checker<check::PreObjCMessage, check::ObjCMessageNil,
-                     check::PreCall> {
+                     check::PreCall, EventDispatcher<ImplicitNullDerefEvent>> {
   mutable std::unique_ptr<BugType> BT_call_null;
   mutable std::unique_ptr<BugType> BT_call_undef;
   mutable std::unique_ptr<BugType> BT_cxx_call_null;
@@ -389,16 +389,30 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
   ProgramStateRef StNonNull, StNull;
   std::tie(StNonNull, StNull) = State->assume(L.castAs<DefinedOrUnknownSVal>());
 
-  if (StNull && !StNonNull) {
-    if (!ChecksEnabled[CK_FunctionPointer]) {
-      C.addSink(StNull);
+  if (StNull) {
+    if (!StNonNull) {
+      if (!ChecksEnabled[CK_FunctionPointer]) {
+        C.addSink(StNull);
+        return nullptr;
+      }
+      if (!BT_call_null)
+        BT_call_null.reset(new BuiltinBug(
+            OriginalName,
+            "Called function pointer is null (null dereference)"));
+      emitBadCall(BT_call_null.get(), C, Callee);
       return nullptr;
     }
-    if (!BT_call_null)
-      BT_call_null.reset(new BuiltinBug(
-          OriginalName, "Called function pointer is null (null dereference)"));
-    emitBadCall(BT_call_null.get(), C, Callee);
-    return nullptr;
+
+    // Otherwise, we have the case where the location could either be
+    // null or not-null.  Record the error node as an "implicit" null
+    // dereference.
+    if (ExplodedNode *N = C.generateSink(StNull, C.getPredecessor())) {
+      printf("\nimplicit null dereference\n");
+      ImplicitNullDerefEvent event = {L, /*isLoad=*/true, N,
+                                      &C.getBugReporter(),
+                                      /*IsDirectDereference=*/true};
+      dispatchEvent(event);
+    }
   }
 
   return StNonNull;

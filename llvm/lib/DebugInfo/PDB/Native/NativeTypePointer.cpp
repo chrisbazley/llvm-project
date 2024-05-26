@@ -65,6 +65,7 @@ void NativeTypePointer::dump(raw_ostream &OS, int Indent,
   }
   dumpSymbolField(OS, "unalignedType", isUnalignedType(), Indent);
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
+  dumpSymbolField(OS, "optionalType", isOptionalType(), Indent);
 }
 
 SymIndexId NativeTypePointer::getClassParentId() const {
@@ -146,6 +147,13 @@ bool NativeTypePointer::isVolatileType() const {
   if (!Record)
     return false;
   return (Record->getOptions() & PointerOptions::Volatile) !=
+         PointerOptions::None;
+}
+
+bool NativeTypePointer::isOptionalType() const {
+  if (!Record)
+    return false;
+  return (Record->getOptions() & PointerOptions::Optional) !=
          PointerOptions::None;
 }
 

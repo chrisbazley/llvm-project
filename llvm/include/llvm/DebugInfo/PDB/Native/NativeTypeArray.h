@@ -33,6 +33,7 @@ public:
   bool isConstType() const override;
   bool isUnalignedType() const override;
   bool isVolatileType() const override;
+  bool isOptionalType() const override;
 
   uint32_t getCount() const override;
   SymIndexId getTypeId() const override;

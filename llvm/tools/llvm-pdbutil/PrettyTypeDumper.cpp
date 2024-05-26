@@ -187,6 +187,8 @@ static void printClassDecl(LinePrinter &Printer,
       WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
     if (Class.isUnalignedType())
       WithColor(Printer, PDB_ColorItem::Keyword).get() << "unaligned ";
+    if (Class.isOptionalType())
+      WithColor(Printer, PDB_ColorItem::Keyword).get() << "_Optional ";
   }
   WithColor(Printer, PDB_ColorItem::Keyword).get() << Class.getUdtKind() << " ";
   WithColor(Printer, PDB_ColorItem::Type).get() << Class.getName();

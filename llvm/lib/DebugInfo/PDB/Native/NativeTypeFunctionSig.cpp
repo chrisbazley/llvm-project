@@ -129,6 +129,7 @@ void NativeTypeFunctionSig::dump(raw_ostream &OS, int Indent,
   dumpSymbolField(OS, "isCxxReturnUdt", isCxxReturnUdt(), Indent);
   dumpSymbolField(OS, "unalignedType", isUnalignedType(), Indent);
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
+  dumpSymbolField(OS, "optionalType", isOptionalType(), Indent);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -198,3 +199,5 @@ bool NativeTypeFunctionSig::isCxxReturnUdt() const {
 bool NativeTypeFunctionSig::isUnalignedType() const { return false; }
 
 bool NativeTypeFunctionSig::isVolatileType() const { return false; }
+
+bool NativeTypeFunctionSig::isOptionalType() const { return false; }

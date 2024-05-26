@@ -71,7 +71,8 @@ static DWARFDie resolveReferencedType(DWARFDie D, DWARFFormValue F) {
 }
 DWARFDie DWARFTypePrinter::skipQualifiers(DWARFDie D) {
   while (D && (D.getTag() == DW_TAG_const_type ||
-               D.getTag() == DW_TAG_volatile_type))
+               D.getTag() == DW_TAG_volatile_type ||
+               D.getTag() == DW_TAG_LLVM_optional_type))
     D = resolveReferencedType(D);
   return D;
 }
@@ -148,6 +149,7 @@ DWARFTypePrinter::appendUnqualifiedNameBefore(DWARFDie D,
     break;
   case DW_TAG_const_type:
   case DW_TAG_volatile_type:
+  case DW_TAG_LLVM_optional_type:
     appendConstVolatileQualifierBefore(D);
     break;
   case DW_TAG_namespace: {
@@ -219,7 +221,7 @@ void DWARFTypePrinter::appendUnqualifiedNameAfter(
   switch (D.getTag()) {
   case DW_TAG_subroutine_type: {
     appendSubroutineNameAfter(D, Inner, SkipFirstParamIfArtificial, false,
-                              false);
+                              false, false);
     break;
   }
   case DW_TAG_array_type: {
@@ -228,6 +230,7 @@ void DWARFTypePrinter::appendUnqualifiedNameAfter(
   }
   case DW_TAG_const_type:
   case DW_TAG_volatile_type:
+  case DW_TAG_LLVM_optional_type:
     appendConstVolatileQualifierAfter(D);
     break;
   case DW_TAG_ptr_to_member_type:
@@ -456,36 +459,55 @@ bool DWARFTypePrinter::appendTemplateParameters(DWARFDie D,
   return IsTemplate;
 }
 void DWARFTypePrinter::decomposeConstVolatile(DWARFDie &N, DWARFDie &T,
-                                              DWARFDie &C, DWARFDie &V) {
+                                              DWARFDie &C, DWARFDie &V, DWARFDie &O) {
+  switch (N.getTag()) {
+  case DW_TAG_const_type:
+    C = N;
+    break;
+  case DW_TAG_volatile_type:
+    V = N;
+    break;
+  case DW_TAG_LLVM_optional_type:
+    O = N;
+    break;
+  }
   (N.getTag() == DW_TAG_const_type ? C : V) = N;
   T = resolveReferencedType(N);
   if (T) {
-    auto Tag = T.getTag();
-    if (Tag == DW_TAG_const_type) {
+    switch (T.getTag()) {
+    case DW_TAG_const_type:
       C = T;
       T = resolveReferencedType(T);
-    } else if (Tag == DW_TAG_volatile_type) {
+      break;
+    case DW_TAG_volatile_type:
       V = T;
       T = resolveReferencedType(T);
+      break;
+    case DW_TAG_LLVM_optional_type:
+      O = T;
+      T = resolveReferencedType(T);
+      break;
     }
   }
 }
 void DWARFTypePrinter::appendConstVolatileQualifierAfter(DWARFDie N) {
   DWARFDie C;
   DWARFDie V;
+  DWARFDie O;
   DWARFDie T;
-  decomposeConstVolatile(N, T, C, V);
+  decomposeConstVolatile(N, T, C, V, O);
   if (T && T.getTag() == DW_TAG_subroutine_type)
     appendSubroutineNameAfter(T, resolveReferencedType(T), false, C.isValid(),
-                              V.isValid());
+                              V.isValid(), O.isValid());
   else
     appendUnqualifiedNameAfter(T, resolveReferencedType(T));
 }
 void DWARFTypePrinter::appendConstVolatileQualifierBefore(DWARFDie N) {
   DWARFDie C;
   DWARFDie V;
+  DWARFDie O;
   DWARFDie T;
-  decomposeConstVolatile(N, T, C, V);
+  decomposeConstVolatile(N, T, C, V, O);
   bool Subroutine = T && T.getTag() == DW_TAG_subroutine_type;
   DWARFDie A = T;
   while (A && A.getTag() == DW_TAG_array_type)
@@ -499,6 +521,8 @@ void DWARFTypePrinter::appendConstVolatileQualifierBefore(DWARFDie N) {
       OS << "const ";
     if (V)
       OS << "volatile ";
+    if (O)
+      OS << "_Optional ";
   }
   appendQualifiedNameBefore(T);
   if (!Leading && !Subroutine) {
@@ -509,6 +533,11 @@ void DWARFTypePrinter::appendConstVolatileQualifierBefore(DWARFDie N) {
       if (C)
         OS << ' ';
       OS << "volatile";
+    }
+    if (O) {
+      if (C || V)
+        OS << ' ';
+      OS << "_Optional";
     }
   }
 }
@@ -521,7 +550,7 @@ void DWARFTypePrinter::appendUnqualifiedName(DWARFDie D,
 }
 void DWARFTypePrinter::appendSubroutineNameAfter(
     DWARFDie D, DWARFDie Inner, bool SkipFirstParamIfArtificial, bool Const,
-    bool Volatile) {
+    bool Volatile, bool Optional) {
   DWARFDie FirstParamIfArtificial;
   OS << '(';
   EndedWithTemplate = false;
@@ -555,6 +584,7 @@ void DWARFTypePrinter::appendSubroutineNameAfter(
           if (DWARFDie U = resolveReferencedType(CV)) {
             Const |= U.getTag() == DW_TAG_const_type;
             Volatile |= U.getTag() == DW_TAG_volatile_type;
+            Optional |= U.getTag() == DW_TAG_LLVM_optional_type;
             return U;
           }
           return DWARFDie();
@@ -627,6 +657,8 @@ void DWARFTypePrinter::appendSubroutineNameAfter(
     OS << " const";
   if (Volatile)
     OS << " volatile";
+  if (Optional)
+    OS << " _Optional";
   if (D.find(DW_AT_reference))
     OS << " &";
   if (D.find(DW_AT_rvalue_reference))

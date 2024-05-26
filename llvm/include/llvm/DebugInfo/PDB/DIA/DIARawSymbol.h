@@ -220,6 +220,7 @@ public:
   bool isVirtualBaseClass() const override;
   bool isVirtualInheritance() const override;
   bool isVolatileType() const override;
+  bool isOptionalType() const override;
   bool wasInlined() const override;
   std::string getUnused() const override;
 

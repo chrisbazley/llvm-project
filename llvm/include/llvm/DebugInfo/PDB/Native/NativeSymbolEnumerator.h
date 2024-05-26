@@ -40,6 +40,7 @@ public:
   PDB_LocType getLocationType() const override;
   bool isConstType() const override;
   bool isVolatileType() const override;
+  bool isOptionalType() const override;
   bool isUnalignedType() const override;
   Variant getValue() const override;
 

@@ -57,6 +57,8 @@ void ClassDefinitionDumper::prettyPrintClassIntro(const ClassLayout &Layout) {
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
   if (Layout.getClass().isUnalignedType())
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "unaligned ";
+  if (Layout.getClass().isOptionalType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "_Optional ";
 
   WithColor(Printer, PDB_ColorItem::Keyword).get() << Class.getUdtKind() << " ";
   WithColor(Printer, PDB_ColorItem::Type).get() << Class.getName();

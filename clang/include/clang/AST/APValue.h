@@ -86,7 +86,7 @@ public:
     return (std::numeric_limits<unsigned>::max() >> NumLowBitsAvailable) - 1;
   }
 
-  static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 4;
 };
 }
 
@@ -100,7 +100,7 @@ template<> struct PointerLikeTypeTraits<clang::TypeInfoLValue> {
   }
   // Validated by static_assert in APValue.cpp; hardcoded to avoid needing
   // to include Type.h.
-  static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 4;
 };
 
 template<> struct PointerLikeTypeTraits<clang::DynamicAllocLValue> {

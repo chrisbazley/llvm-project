@@ -55,6 +55,8 @@ def Nullability : Package<"nullability">,
                   Released>
   ]>;
 
+def Optionality : Package<"optionality">;
+
 def Cplusplus : Package<"cplusplus">;
 def CplusplusAlpha : Package<"cplusplus">, ParentPackage<Alpha>;
 def CplusplusOptIn : Package<"cplusplus">, ParentPackage<OptIn>;
@@ -348,6 +350,20 @@ def NullableReturnedFromNonnullChecker : Checker<"NullableReturnedFromNonnull">,
   Documentation<NotDocumented>;
 
 } // end "nullability"
+
+//===----------------------------------------------------------------------===//
+// Optionality checkers.
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = Optionality in {
+
+def OptionalityChecker : Checker<"OptionalityChecker">,
+  HelpText<"Warns when a pointer to an object of _Optional type is "
+           "dereferenced (even if only syntactically) without a preceding "
+           "check for null.">,
+  Documentation<HasDocumentation>;
+
+} // end "optionality"
 
 //===----------------------------------------------------------------------===//
 // APIModeling.

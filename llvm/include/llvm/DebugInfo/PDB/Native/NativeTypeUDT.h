@@ -59,6 +59,7 @@ public:
   bool isValueUdt() const override;
   bool isUnalignedType() const override;
   bool isVolatileType() const override;
+  bool isOptionalType() const override;
 
 protected:
   codeview::TypeIndex Index;

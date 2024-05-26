@@ -49,6 +49,7 @@ public:
   FORWARD_SYMBOL_METHOD(getValue)
   FORWARD_SYMBOL_METHOD(getVirtualAddress)
   FORWARD_SYMBOL_METHOD(isVolatileType)
+  FORWARD_SYMBOL_METHOD(isOptionalType)
 
   std::unique_ptr<IPDBEnumLineNumbers> getLineNumbers() const;
   uint32_t getCompilandId() const;

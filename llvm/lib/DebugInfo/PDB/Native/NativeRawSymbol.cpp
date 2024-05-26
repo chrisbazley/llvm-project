@@ -724,6 +724,10 @@ bool NativeRawSymbol::isVolatileType() const {
   return false;
 }
 
+bool NativeRawSymbol::isOptionalType() const {
+  return false;
+}
+
 bool NativeRawSymbol::wasInlined() const {
   return false;
 }

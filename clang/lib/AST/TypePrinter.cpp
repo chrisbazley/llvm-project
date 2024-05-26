@@ -169,6 +169,11 @@ static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
       OS << "__restrict";
     }
   }
+  if (TypeQuals & Qualifiers::Optional) {
+    if (appendSpace) OS << ' ';
+    OS << "_Optional";
+    appendSpace = true;
+  }
 }
 
 void TypePrinter::spaceBeforePlaceHolder(raw_ostream &OS) {

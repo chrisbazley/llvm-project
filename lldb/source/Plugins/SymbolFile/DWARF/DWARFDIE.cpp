@@ -308,6 +308,9 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   case DW_TAG_volatile_type:
     s.PutCString("volatile ");
     break;
+  case DW_TAG_optional_type:
+    s.PutCString("_Optional ");
+    break;
   case DW_TAG_LLVM_ptrauth_type: {
     unsigned key = GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_key, 0);
     bool isAddressDiscriminated = GetAttributeValueAsUnsigned(

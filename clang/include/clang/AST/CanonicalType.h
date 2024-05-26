@@ -146,6 +146,10 @@ public:
     return Stored.isLocalRestrictQualified();
   }
 
+  bool isOptionalQualified() const {
+    return Stored.isLocalOptionalQualified();
+  }
+
   /// Determines if this canonical type is furthermore
   /// canonical as a parameter.  The parameter-canonicalization
   /// process decays arrays to pointers and drops top-level qualifiers.

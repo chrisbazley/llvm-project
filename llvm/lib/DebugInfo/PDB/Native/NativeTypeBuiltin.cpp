@@ -43,3 +43,7 @@ bool NativeTypeBuiltin::isUnalignedType() const {
 bool NativeTypeBuiltin::isVolatileType() const {
   return (Mods & ModifierOptions::Volatile) != ModifierOptions::None;
 }
+
+bool NativeTypeBuiltin::isOptionalType() const {
+  return (Mods & ModifierOptions::Optional) != ModifierOptions::None;
+}

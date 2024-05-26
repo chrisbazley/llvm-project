@@ -93,6 +93,9 @@ public:
     eEncodingIsAtomicUID,
     /// This type is the synthetic type whose UID is m_encoding_uid.
     eEncodingIsSyntheticUID
+    /// This type is the type whose UID is m_encoding_uid with the _Optional
+    /// qualifier added.
+    eEncodingIsOptionalUID,
   };
 
   enum class ResolveState : unsigned char {

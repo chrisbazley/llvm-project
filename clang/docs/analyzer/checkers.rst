@@ -478,6 +478,37 @@ nullability.NullableReturnedFromNonnull (ObjC)
 """"""""""""""""""""""""""""""""""""""""""""""
 Warns when a nullable pointer is returned from a function that has _Nonnull return type.
 
+.. _optionality-checkers:
+
+optionality
+^^^^^^^^^^^
+
+Warn about misuse of the ``_Optional`` type qualifier.
+
+.. _optionality-OptionalityChecker:
+
+_optionality.OptionalityChecker
+""""""""""""""""""""""""""""
+Warns when a pointer to an object of ``_Optional`` type is dereferenced (even if only syntactically) without a preceding check for null.
+This is stricter than the nullability checker in order to validate expressions such as ``&*x`` or ``&x[0]``, which implicitly remove the qualifier from a pointee's type without actually accessing its stored value.
+Such expressions are not strictly-conformant when applied to a null pointer anyway: they have undefined behaviour.
+
+.. code-block:: c
+
+ struct LinkedList {
+   int data;
+   _Optional struct LinkedList *next;
+ };
+
+ struct LinkedList updateNextDataAndGetNext(struct LinkedList *list, int newData) {
+   _Optional struct LinkedList *next = list->next;
+   next->data = newData; // warn (unguarded dereference of pointer to optional)
+   if (next) {
+     next->data = newData; // ok
+   }
+   return &*next; // warn (unguarded implicit removal of optional qualifier)
+ }
+
 .. _optin-checkers:
 
 optin

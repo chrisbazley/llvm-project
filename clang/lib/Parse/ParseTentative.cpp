@@ -885,7 +885,7 @@ Parser::TPResult Parser::TryParsePtrOperatorSeq() {
       if (!TrySkipAttributes())
         return TPResult::Error;
 
-      while (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict,
+      while (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw__Optional, tok::kw_restrict,
                          tok::kw__Nonnull, tok::kw__Nullable,
                          tok::kw__Nullable_result, tok::kw__Null_unspecified,
                          tok::kw__Atomic))
@@ -1460,6 +1460,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     // cv-qualifier
   case tok::kw_const:
   case tok::kw_volatile:
+  case tok::kw__Optional:
     return TPResult::True;
 
     // OpenCL address space qualifiers
@@ -1919,7 +1920,7 @@ bool Parser::isCXXFunctionDeclarator(
       TPR = TPResult::False;
     else {
       const Token &Next = NextToken();
-      if (Next.isOneOf(tok::amp, tok::ampamp, tok::kw_const, tok::kw_volatile,
+      if (Next.isOneOf(tok::amp, tok::ampamp, tok::kw_const, tok::kw_volatile, tok::kw__Optional,
                        tok::kw_throw, tok::kw_noexcept, tok::l_square,
                        tok::l_brace, tok::kw_try, tok::equal, tok::arrow) ||
           isCXX11VirtSpecifier(Next))
@@ -2091,7 +2092,7 @@ Parser::TPResult Parser::TryParseFunctionDeclarator() {
     return TPResult::Error;
 
   // cv-qualifier-seq
-  while (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw___unaligned,
+  while (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw__Optional, tok::kw___unaligned,
                      tok::kw_restrict))
     ConsumeToken();
 

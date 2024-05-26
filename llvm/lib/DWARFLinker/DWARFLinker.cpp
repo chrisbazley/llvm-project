@@ -122,6 +122,7 @@ static bool isTypeTag(uint16_t Tag) {
   case dwarf::DW_TAG_packed_type:
   case dwarf::DW_TAG_volatile_type:
   case dwarf::DW_TAG_restrict_type:
+  case dwarf::DW_TAG_LLVM_optional_type:
   case dwarf::DW_TAG_atomic_type:
   case dwarf::DW_TAG_interface_type:
   case dwarf::DW_TAG_unspecified_type:

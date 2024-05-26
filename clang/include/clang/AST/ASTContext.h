@@ -2151,6 +2151,18 @@ public:
     return getQualifiedType(type.getUnqualifiedType(), Qs);
   }
 
+  /// Return a type without the optional qualifier.
+  QualType getNonOptionalType(QualType type) const {
+    if (type.isLocalOptionalQualified()) {
+      type.removeLocalOptional();
+    } else if (type.isOptionalQualified()) {
+      Qualifiers Qs = type.getQualifiers();
+      Qs.removeOptional();
+      type = getQualifiedType(type.getUnqualifiedType(), Qs);
+    }
+    return type;
+  }
+
   unsigned char getFixedPointScale(QualType Ty) const;
   unsigned char getFixedPointIBits(QualType Ty) const;
   llvm::FixedPointSemantics getFixedPointSemantics(QualType Ty) const;
@@ -2546,8 +2558,8 @@ public:
 
   bool hasSameNullabilityTypeQualifier(QualType SubT, QualType SuperT,
                                        bool IsParam) const {
-    auto SubTnullability = SubT->getNullability();
-    auto SuperTnullability = SuperT->getNullability();
+    auto SubTnullability = SubT.getNullability();
+    auto SuperTnullability = SuperT.getNullability();
     if (SubTnullability.has_value() == SuperTnullability.has_value()) {
       // Neither has nullability; return true
       if (!SubTnullability)

@@ -1366,9 +1366,11 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
     if (!getLangOpts().CPlusPlus14 && NewMethod->isConstexpr() &&
         !isa<CXXConstructorDecl>(NewMethod))
       NewQuals.addConst();
-    // We do not allow overloading based off of '__restrict'.
+    // We do not allow overloading based off of '__restrict' or '_Optional'.
     OldQuals.removeRestrict();
+    OldQuals.removeOptional();
     NewQuals.removeRestrict();
+    NewQuals.removeOptional();
     if (OldQuals != NewQuals)
       return true;
   }

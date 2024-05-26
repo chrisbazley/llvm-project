@@ -44,6 +44,7 @@ public:
   FORWARD_SYMBOL_METHOD(getVirtualAddress)
   FORWARD_SYMBOL_METHOD(getVirtualBaseOffset)
   FORWARD_SYMBOL_METHOD(isVolatileType)
+  FORWARD_SYMBOL_METHOD(isOptionalType)
 };
 } // namespace pdb
 } // namespace llvm

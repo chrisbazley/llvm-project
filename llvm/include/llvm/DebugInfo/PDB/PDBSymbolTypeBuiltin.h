@@ -27,6 +27,7 @@ public:
   FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(isVolatileType)
+  FORWARD_SYMBOL_METHOD(isOptionalType)
 };
 
 } // namespace pdb

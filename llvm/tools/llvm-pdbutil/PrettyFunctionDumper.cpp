@@ -114,6 +114,8 @@ void FunctionDumper::start(const PDBSymbolTypeFunctionSig &Symbol,
     WithColor(Printer, PDB_ColorItem::Keyword).get() << " const";
   if (Symbol.isVolatileType())
     WithColor(Printer, PDB_ColorItem::Keyword).get() << " volatile";
+  if (Symbol.isOptionalType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << " _Optional";
 }
 
 void FunctionDumper::start(const PDBSymbolFunc &Symbol, PointerType Pointer) {
@@ -203,6 +205,8 @@ void FunctionDumper::start(const PDBSymbolFunc &Symbol, PointerType Pointer) {
     WithColor(Printer, PDB_ColorItem::Keyword).get() << " const";
   if (Symbol.isVolatileType())
     WithColor(Printer, PDB_ColorItem::Keyword).get() << " volatile";
+  if (Symbol.isOptionalType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << " _Optional";
   if (Symbol.isPureVirtual())
     Printer << " = 0";
 }
@@ -257,6 +261,8 @@ void FunctionDumper::dump(const PDBSymbolTypePointer &Symbol) {
       WithColor(Printer, PDB_ColorItem::Keyword).get() << "const ";
     if (Symbol.isVolatileType())
       WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
+    if (Symbol.isOptionalType())
+      WithColor(Printer, PDB_ColorItem::Keyword).get() << "_Optional ";
     PointeeType->dump(*this);
     Printer << (Symbol.isReference() ? "&" : "*");
 

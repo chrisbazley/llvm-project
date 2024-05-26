@@ -208,6 +208,7 @@ HANDLE_DW_TAG(0x0048, call_site, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x0049, call_site_parameter, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x004a, skeleton_unit, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x004b, immutable_type, 5, DWARF, DW_KIND_TYPE)
+
 // Vendor extensions:
 HANDLE_DW_TAG(0x4081, MIPS_loop, 0, MIPS, DW_KIND_NONE)
 // Conflicting:
@@ -253,6 +254,8 @@ HANDLE_DW_TAG(0x5111, ALTIUM_rom, 0, ALTIUM, DW_KIND_NONE)
 
 // LLVM
 HANDLE_DW_TAG(0x6000, LLVM_annotation, 0, LLVM, DW_KIND_NONE)
+HANDLE_DW_TAG(0x6001, LLVM_optional_type, 0, LLVM, DW_KIND_TYPE)
+
 
 // Green Hills.
 HANDLE_DW_TAG(0x8004, GHS_namespace, 0, GHS, DW_KIND_NONE)

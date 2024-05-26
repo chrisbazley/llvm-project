@@ -2874,6 +2874,7 @@ public:
                             SourceLocation FallbackLoc,
                             SourceLocation ConstQualLoc = SourceLocation(),
                             SourceLocation VolatileQualLoc = SourceLocation(),
+                            SourceLocation OptionalQualLoc = SourceLocation(),
                             SourceLocation RestrictQualLoc = SourceLocation(),
                             SourceLocation AtomicQualLoc = SourceLocation(),
                             SourceLocation UnalignedQualLoc = SourceLocation());
