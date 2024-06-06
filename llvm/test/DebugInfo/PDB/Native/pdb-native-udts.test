@@ -50,6 +50,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 4
@@ -73,6 +74,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 5
@@ -96,6 +98,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 6
@@ -119,6 +122,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 7
@@ -142,6 +146,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 8
@@ -165,6 +170,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 9
@@ -188,6 +194,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 10
@@ -211,6 +218,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 11
@@ -234,6 +242,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 12
@@ -257,6 +266,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 13
@@ -280,6 +290,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 14
@@ -303,6 +314,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 15
@@ -326,6 +338,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 16
@@ -348,6 +361,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 17
@@ -371,6 +385,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 18
@@ -394,6 +409,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 19
@@ -417,6 +433,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 20
@@ -440,6 +457,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 21
@@ -464,6 +482,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 22
@@ -488,6 +507,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 1
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 23
@@ -512,6 +532,7 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 0
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 1
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }
 ; DUMP-NEXT: {
 ; DUMP-NEXT:   symIndexId: 24
@@ -536,4 +557,5 @@ PRETTY: unaligned struct Nothing
 ; DUMP-NEXT:   unalignedType: 1
 ; DUMP-NEXT:   isValueUdt: 0
 ; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT:   optionalType: 0
 ; DUMP-NEXT: }

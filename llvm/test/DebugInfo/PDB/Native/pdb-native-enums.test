@@ -102,6 +102,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 4
 DUMP:     symTag: Data
@@ -114,6 +115,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: -128
 DUMP:   }
 DUMP:   {
@@ -128,6 +130,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 0
 DUMP:   }
 DUMP:   {
@@ -142,6 +145,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 127
 DUMP:   }
 DUMP: }
@@ -168,6 +172,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 9
 DUMP:     symTag: Data
@@ -180,6 +185,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: -32768
 DUMP:   }
 DUMP:   {
@@ -194,6 +200,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 0
 DUMP:   }
 DUMP:   {
@@ -208,6 +215,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 32767
 DUMP:   }
 DUMP: }
@@ -234,6 +242,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 14
 DUMP:     symTag: Data
@@ -246,6 +255,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: -2147483648
 DUMP:   }
 DUMP:   {
@@ -260,6 +270,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 0
 DUMP:   }
 DUMP:   {
@@ -274,6 +285,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 2147483647
 DUMP:   }
 DUMP: }
@@ -300,6 +312,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 19
 DUMP:     symTag: Data
@@ -312,6 +325,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: -9223372036854775808
 DUMP:   }
 DUMP:   {
@@ -326,6 +340,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 0
 DUMP:   }
 DUMP:   {
@@ -340,6 +355,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 9223372036854775807
 DUMP:   }
 DUMP: }
@@ -366,6 +382,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 24
 DUMP:     symTag: Data
@@ -378,6 +395,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 0
 DUMP:   }
 DUMP:   {
@@ -392,6 +410,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 255
 DUMP:   }
 DUMP: }
@@ -418,6 +437,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 28
 DUMP:     symTag: Data
@@ -430,6 +450,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 0
 DUMP:   }
 DUMP:   {
@@ -444,6 +465,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 65535
 DUMP:   }
 DUMP: }
@@ -470,6 +492,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 32
 DUMP:     symTag: Data
@@ -482,6 +505,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 0
 DUMP:   }
 DUMP:   {
@@ -496,6 +520,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 4294967295
 DUMP:   }
 DUMP: }
@@ -522,6 +547,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 36
 DUMP:     symTag: Data
@@ -534,6 +560,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 0
 DUMP:   }
 DUMP:   {
@@ -548,6 +575,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 255
 DUMP:   }
 DUMP: }
@@ -574,6 +602,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 39
 DUMP:     symTag: Data
@@ -586,6 +615,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 97
 DUMP:   }
 DUMP:   {
@@ -600,6 +630,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 98
 DUMP:   }
 DUMP: }
@@ -626,6 +657,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 43
 DUMP:     symTag: Data
@@ -638,6 +670,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 97
 DUMP:   }
 DUMP:   {
@@ -652,6 +685,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 98
 DUMP:   }
 DUMP: }
@@ -678,6 +712,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 46
 DUMP:     symTag: Data
@@ -690,6 +725,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 97
 DUMP:   }
 DUMP:   {
@@ -704,6 +740,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 98
 DUMP:   }
 DUMP: }
@@ -730,6 +767,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 50
 DUMP:     symTag: Data
@@ -742,6 +780,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: true
 DUMP:   }
 DUMP:   {
@@ -756,6 +795,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: false
 DUMP:   }
 DUMP: {
@@ -781,6 +821,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 114
 DUMP:     symTag: Data
@@ -793,6 +834,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 1
 DUMP:   }
 DUMP:   {
@@ -807,6 +849,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 2
 DUMP:   }
 DUMP: }
@@ -833,6 +876,7 @@ DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
+DUMP:   optionalType: 0
 DUMP:   {
 DUMP:     symIndexId: 114
 DUMP:     symTag: Data
@@ -845,6 +889,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 1
 DUMP:   }
 DUMP:   {
@@ -859,6 +904,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 2
 DUMP:   }
 DUMP: }
@@ -885,7 +931,8 @@ DUMP:   isRefUdt: 0
 DUMP:   scoped: 0
 DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
-DUMP:   volatileType: 1  {
+DUMP:   volatileType: 1
+DUMP:   optionalType: 0  {
 DUMP:     symIndexId: 114
 DUMP:     symTag: Data
 DUMP:     classParentId: 113
@@ -897,6 +944,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 1
 DUMP:   }
 DUMP:   {
@@ -911,6 +959,7 @@ DUMP:     locationType: constant
 DUMP:     constType: 0
 DUMP:     unalignedType: 0
 DUMP:     volatileType: 0
+DUMP:     optionalType: 0
 DUMP:     value: 2
 DUMP:   }
 DUMP: }

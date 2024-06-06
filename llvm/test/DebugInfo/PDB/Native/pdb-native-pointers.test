@@ -49,6 +49,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -61,6 +62,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -73,6 +75,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -85,6 +88,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -97,6 +101,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -109,6 +114,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -121,6 +127,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -133,6 +140,7 @@
 ; CHECK-NEXT:   restrictedType: 1
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -145,6 +153,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -157,6 +166,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -169,6 +179,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -181,6 +192,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -193,6 +205,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -205,6 +218,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -217,6 +231,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -229,6 +244,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -241,6 +257,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -253,6 +270,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -266,6 +284,7 @@
 ; CHECK-NEXT:   isSingleInheritance: 1
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -279,6 +298,7 @@
 ; CHECK-NEXT:   isSingleInheritance: 1
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -292,6 +312,7 @@
 ; CHECK-NEXT:   isSingleInheritance: 1
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -304,6 +325,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -316,6 +338,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -328,6 +351,7 @@
 ; CHECK-NEXT:   restrictedType: 1
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -340,6 +364,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -352,6 +377,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -364,6 +390,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -376,6 +403,7 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   symTag: PointerType
@@ -388,4 +416,5 @@
 ; CHECK-NEXT:   restrictedType: 0
 ; CHECK-NEXT:   unalignedType: 0
 ; CHECK-NEXT:   volatileType: 0
+; CHECK-NEXT:   optionalType: 0
 ; CHECK-NEXT: }
