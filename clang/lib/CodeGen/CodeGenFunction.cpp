@@ -1008,7 +1008,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (SanOpts.has(SanitizerKind::NullabilityReturn)) {
     auto Nullability = FnRetTy.getNullability();
     if (Nullability && *Nullability == NullabilityKind::NonNull &&
-        !FnRetTy.isRecordType()) {
+        !FnRetTy->isRecordType()) {
       if (!(SanOpts.has(SanitizerKind::ReturnsNonnullAttribute) &&
             CurCodeDecl && CurCodeDecl->getAttr<ReturnsNonNullAttr>()))
         RetValNullabilityPrecondition =

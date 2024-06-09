@@ -400,7 +400,7 @@ ConditionTruthVal ProgramState::isNull(SVal V) const {
 
   SymbolRef Sym = V.getAsSymbol(/* IncludeBaseRegion */ true);
   if (!Sym) {
-    if (Optional<Loc> LV = V.getAs<Loc>()) {
+    if (std::optional<Loc> LV = V.getAs<Loc>()) {
       SValBuilder &SVB = stateMgr->getSValBuilder();
       QualType T;
       const MemRegion *MR = LV->getAsRegion();
