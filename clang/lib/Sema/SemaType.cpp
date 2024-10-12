@@ -5028,6 +5028,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         //   A volatile-qualified return type is deprecated
         if (T.isVolatileQualified() && S.getLangOpts().CPlusPlus20)
           S.Diag(DeclType.Loc, diag::warn_deprecated_volatile_return) << T;
+
+        // Types other than those of a pointed-to object or pointed-to incomplete type
+        // shall not be _Optional-qualified in a declaration.
+        if (T.isOptionalQualified()) {
+          S.Diag(D.getDeclSpec().getOptionalSpecLoc(),
+                  diag::err_typecheck_invalid_optional_not_pointee)
+              << T;
+        }
       }
 
       // Objective-C ARC ownership qualifiers are ignored on the function
@@ -5567,7 +5575,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     S.Diag(D.getDeclSpec().getOptionalSpecLoc(),
            diag::err_typecheck_invalid_optional_not_pointee)
         << T;
-    Context.getNonOptionalType(T);
   }
 
   // Apply any undistributed attributes from the declaration or declarator.
