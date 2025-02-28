@@ -1140,12 +1140,16 @@ void NullabilityChecker::checkPostStmt(const ExplicitCastExpr *CE,
   if (State->get<InvariantViolated>())
     return;
 
-  Nullability DestNullability = getNullabilityAnnotation(DestType);
+  Nullability DestNullability = Nullability::Unspecified;
 
-  // No explicit nullability in the destination type, so this cast does not
-  // change the nullability.
-  if (DestNullability == Nullability::Unspecified)
-    return;
+  if (!pointeeIsOptional(OriginType)) {
+    DestNullability = getNullabilityAnnotation(DestType);
+
+    // No explicit nullability in the destination type, so this cast does not
+    // change the nullability.
+    if (DestNullability == Nullability::Unspecified)
+      return;
+  }
 
   auto RegionSVal = C.getSVal(CE).getAs<DefinedOrUnknownSVal>();
   const MemRegion *Region = getTrackRegion(*RegionSVal);
