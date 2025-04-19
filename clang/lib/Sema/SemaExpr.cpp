@@ -14167,6 +14167,16 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
         if (const PointerType *PT = Result->getAs<PointerType>()) {
           // A dereferenced pointer is not a null pointer (by definition).
           auto PointeeType = PT->getPointeeType();
+
+          // If the pointee type is an array type, move the qualifiers up to the
+          // top level, so they can be modified.
+          if (PointeeType->isArrayType()) {
+            Qualifiers Quals;
+            PointeeType = Context.getUnqualifiedArrayType(PointeeType, Quals);
+            if (Quals)
+              PointeeType = Context.getQualifiedType(PointeeType, Quals);
+          }
+
           Result =
               Context.getPointerType(Context.getNonOptionalType(PointeeType));
         }
@@ -14185,7 +14195,19 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
 
   Expr::LValueClassification lval = op->ClassifyLValue(Context);
   unsigned AddressOfError = AO_No_Error;
-  QualType Ty = Context.getNonOptionalType(op->getType());
+
+  QualType Ty = op->getType();
+
+  // If the type is an array type, move the qualifiers up to the
+  // top level, so they can be modified.
+  if (Ty->isArrayType()) {
+    Qualifiers Quals;
+    Ty = Context.getUnqualifiedArrayType(Ty, Quals);
+    if (Quals)
+      Ty = Context.getQualifiedType(Ty, Quals);
+  }
+
+  Ty = Context.getNonOptionalType(Ty);
 
   if (lval == Expr::LV_ClassTemporary || lval == Expr::LV_ArrayTemporary) {
     bool sfinae = (bool)isSFINAEContext();
