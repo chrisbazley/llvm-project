@@ -41,6 +41,8 @@ class OptionalityChecker
           check::PreStmt<ArraySubscriptExpr>, check::PreStmt<MemberExpr>> {
 
   void verifyAccess(CheckerContext &C, const Expr *E) const;
+  void verifyCompare(CheckerContext &C, const Expr *L, const Expr *R) const;
+  ExplodedNode *getNodeIfBug(CheckerContext &C, const Expr *E) const;
 
 public:
   void checkPreStmt(const UnaryOperator *UO, CheckerContext &C) const;
@@ -85,6 +87,8 @@ void OptionalityChecker::checkPreStmt(const BinaryOperator *BO,
 
   if (clang::ento::iterator::isAccessOperator(OK)) {
     verifyAccess(C, BO->getLHS());
+  } else if (BinaryOperator::isRelationalOp(OK)) {
+    verifyCompare(C, BO->getLHS(), BO->getRHS());
   }
 }
 
@@ -101,21 +105,29 @@ void OptionalityChecker::checkPreStmt(const MemberExpr *ME,
   verifyAccess(C, ME->getBase());
 }
 
+ExplodedNode *OptionalityChecker::getNodeIfBug(CheckerContext &C,
+                                               const Expr *E) const {
+  E->dump();
+   const Expr *SrcE = E->IgnoreParenImpCasts();
+   SrcE->dump();
+
+       if (!pointeeIsOptional(SrcE->getType())) return nullptr;
+
+   ProgramStateRef State = C.getState();
+   SVal Val = State->getSVal(E, C.getLocationContext());
+   auto DefOrUnknown = Val.getAs<DefinedOrUnknownSVal>();
+   if (!DefOrUnknown)
+     return nullptr;
+
+   if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
+     return nullptr;
+
+   static CheckerProgramPointTag Tag(this, "OptionalityChecker");
+   return C.generateErrorNode(State, &Tag);
+}
+
 void OptionalityChecker::verifyAccess(CheckerContext &C, const Expr *E) const {
-  if (!pointeeIsOptional(E->getType()))
-    return;
-
-  ProgramStateRef State = C.getState();
-  SVal Val = State->getSVal(E, C.getLocationContext());
-  auto DefOrUnknown = Val.getAs<DefinedOrUnknownSVal>();
-  if (!DefOrUnknown)
-    return;
-
-  if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
-    return;
-
-  static CheckerProgramPointTag Tag(this, "OptionalityChecker");
-  ExplodedNode *N = C.generateErrorNode(State, &Tag);
+  ExplodedNode *const N = getNodeIfBug(C, E);
   if (!N)
     return;
 
@@ -124,6 +136,23 @@ void OptionalityChecker::verifyAccess(CheckerContext &C, const Expr *E) const {
   // a nullable pointer is always an error.
   reportBug("Pointer to _Optional object is dereferenced without a preceding "
             "check for null",
+            N, BR);
+}
+
+void OptionalityChecker::verifyCompare(CheckerContext &C, const Expr *L,
+                                       const Expr *R) const {
+  ExplodedNode *N = getNodeIfBug(C, L);
+  if (!N)
+    N = getNodeIfBug(C, R);
+
+  if (!N)
+    return;
+
+  BugReporter &BR = C.getBugReporter();
+  // Do not suppress errors on defensive code paths, because dereferencing
+  // a nullable pointer is always an error.
+  reportBug("Pointer to _Optional object is used by a relational operator "
+            "without a preceding check for null",
             N, BR);
 }
 
