@@ -107,23 +107,22 @@ void OptionalityChecker::checkPreStmt(const MemberExpr *ME,
 
 ExplodedNode *OptionalityChecker::getNodeIfBug(CheckerContext &C,
                                                const Expr *E) const {
-  E->dump();
-   const Expr *SrcE = E->IgnoreParenImpCasts();
-   SrcE->dump();
+  const Expr *SrcE = E->IgnoreParenImpCasts();
 
-       if (!pointeeIsOptional(SrcE->getType())) return nullptr;
+  if (!pointeeIsOptional(SrcE->getType()))
+    return nullptr;
 
-   ProgramStateRef State = C.getState();
-   SVal Val = State->getSVal(E, C.getLocationContext());
-   auto DefOrUnknown = Val.getAs<DefinedOrUnknownSVal>();
-   if (!DefOrUnknown)
-     return nullptr;
+  ProgramStateRef State = C.getState();
+  SVal Val = State->getSVal(E, C.getLocationContext());
+  auto DefOrUnknown = Val.getAs<DefinedOrUnknownSVal>();
+  if (!DefOrUnknown)
+    return nullptr;
 
-   if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
-     return nullptr;
+  if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
+    return nullptr;
 
-   static CheckerProgramPointTag Tag(this, "OptionalityChecker");
-   return C.generateErrorNode(State, &Tag);
+  static CheckerProgramPointTag Tag(this, "OptionalityChecker");
+  return C.generateErrorNode(State, &Tag);
 }
 
 void OptionalityChecker::verifyAccess(CheckerContext &C, const Expr *E) const {
