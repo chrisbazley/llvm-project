@@ -40,6 +40,7 @@ class OptionalityChecker
           check::PreStmt<UnaryOperator>, check::PreStmt<BinaryOperator>,
           check::PreStmt<ArraySubscriptExpr>, check::PreStmt<MemberExpr>> {
 
+  void verifyArith(CheckerContext &C, const Expr *E) const;
   void verifyAccess(CheckerContext &C, const Expr *E) const;
   void verifyCompare(CheckerContext &C, const Expr *L, const Expr *R) const;
   ExplodedNode *getNodeIfBug(CheckerContext &C, const Expr *E) const;
@@ -75,9 +76,16 @@ void OptionalityChecker::checkPreStmt(const UnaryOperator *UO,
     return;
 
   UnaryOperatorKind OK = UO->getOpcode();
-
-  if (clang::ento::iterator::isAccessOperator(OK)) {
+  switch (OK) {
+  case UO_Deref:
     verifyAccess(C, UO->getSubExpr());
+    break;
+  case UO_PreInc:
+  case UO_PostInc:
+  case UO_PreDec:
+  case UO_PostDec:
+    verifyArith(C, UO->getSubExpr());
+    break;
   }
 }
 
@@ -85,7 +93,7 @@ void OptionalityChecker::checkPreStmt(const BinaryOperator *BO,
                                       CheckerContext &C) const {
   BinaryOperatorKind OK = BO->getOpcode();
 
-  if (clang::ento::iterator::isAccessOperator(OK)) {
+  if (OK == BO_PtrMemI) {
     verifyAccess(C, BO->getLHS());
   } else if (BinaryOperator::isRelationalOp(OK)) {
     verifyCompare(C, BO->getLHS(), BO->getRHS());
@@ -113,7 +121,19 @@ ExplodedNode *OptionalityChecker::getNodeIfBug(CheckerContext &C,
     return nullptr;
 
   ProgramStateRef State = C.getState();
-  SVal Val = State->getSVal(E, C.getLocationContext());
+  SVal Val = State->getSVal(SrcE, C.getLocationContext());
+
+  if (SymbolRef Sym = Val.getAsSymbol()) {
+    SVal SymVal = C.getSValBuilder().makeSymbolVal(Sym);
+
+    if (State->isNonNull(SymVal).isConstrainedTrue())
+      return nullptr;
+  }
+
+  // Convert lvalue to value if necessary (e.g. for unary ++)
+  if (auto Location = Val.getAs<Loc>())
+    Val = State->getSVal(*Location);
+
   auto DefOrUnknown = Val.getAs<DefinedOrUnknownSVal>();
   if (!DefOrUnknown)
     return nullptr;
@@ -123,6 +143,19 @@ ExplodedNode *OptionalityChecker::getNodeIfBug(CheckerContext &C,
 
   static CheckerProgramPointTag Tag(this, "OptionalityChecker");
   return C.generateErrorNode(State, &Tag);
+}
+
+void OptionalityChecker::verifyArith(CheckerContext &C, const Expr *E) const {
+  ExplodedNode *const N = getNodeIfBug(C, E);
+  if (!N)
+    return;
+
+  BugReporter &BR = C.getBugReporter();
+  // Do not suppress errors on defensive code paths, because dereferencing
+  // a nullable pointer is always an error.
+  reportBug("Pointer to _Optional object is used by an arithmetic operator "
+            "without a preceding check for null",
+            N, BR);
 }
 
 void OptionalityChecker::verifyAccess(CheckerContext &C, const Expr *E) const {
