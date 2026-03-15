@@ -40,9 +40,10 @@ class OptionalityChecker
           check::PreStmt<UnaryOperator>, check::PreStmt<BinaryOperator>,
           check::PreStmt<ArraySubscriptExpr>, check::PreStmt<MemberExpr>> {
 
-  void verifyArith(CheckerContext &C, const Expr *E) const;
+  void verifyIncDec(CheckerContext &C, const Expr *E) const;
   void verifyAccess(CheckerContext &C, const Expr *E) const;
   void verifyCompare(CheckerContext &C, const Expr *L, const Expr *R) const;
+  void verifyAdditive(CheckerContext &C, const Expr *L, const Expr *R) const;
   ExplodedNode *getNodeIfBug(CheckerContext &C, const Expr *E) const;
 
 public:
@@ -84,7 +85,7 @@ void OptionalityChecker::checkPreStmt(const UnaryOperator *UO,
   case UO_PostInc:
   case UO_PreDec:
   case UO_PostDec:
-    verifyArith(C, UO->getSubExpr());
+    verifyIncDec(C, UO->getSubExpr());
     break;
   }
 }
@@ -97,6 +98,8 @@ void OptionalityChecker::checkPreStmt(const BinaryOperator *BO,
     verifyAccess(C, BO->getLHS());
   } else if (BinaryOperator::isRelationalOp(OK)) {
     verifyCompare(C, BO->getLHS(), BO->getRHS());
+  } else if (BinaryOperator::isAdditiveOp(OK)) {
+    verifyAdditive(C, BO->getLHS(), BO->getRHS());
   }
 }
 
@@ -145,7 +148,7 @@ ExplodedNode *OptionalityChecker::getNodeIfBug(CheckerContext &C,
   return C.generateErrorNode(State, &Tag);
 }
 
-void OptionalityChecker::verifyArith(CheckerContext &C, const Expr *E) const {
+void OptionalityChecker::verifyIncDec(CheckerContext &C, const Expr *E) const {
   ExplodedNode *const N = getNodeIfBug(C, E);
   if (!N)
     return;
@@ -153,8 +156,8 @@ void OptionalityChecker::verifyArith(CheckerContext &C, const Expr *E) const {
   BugReporter &BR = C.getBugReporter();
   // Do not suppress errors on defensive code paths, because dereferencing
   // a nullable pointer is always an error.
-  reportBug("Pointer to _Optional object is used by an arithmetic operator "
-            "without a preceding check for null",
+  reportBug("Pointer to _Optional object is used by an increment or decrement "
+            "operator without a preceding check for null",
             N, BR);
 }
 
@@ -184,6 +187,23 @@ void OptionalityChecker::verifyCompare(CheckerContext &C, const Expr *L,
   // Do not suppress errors on defensive code paths, because dereferencing
   // a nullable pointer is always an error.
   reportBug("Pointer to _Optional object is used by a relational operator "
+            "without a preceding check for null",
+            N, BR);
+}
+
+void OptionalityChecker::verifyAdditive(CheckerContext & C, const Expr *L,
+                                        const Expr *R) const {
+  ExplodedNode *N = getNodeIfBug(C, L);
+  if (!N)
+    N = getNodeIfBug(C, R);
+
+  if (!N)
+    return;
+
+  BugReporter &BR = C.getBugReporter();
+  // Do not suppress errors on defensive code paths, because dereferencing
+  // a nullable pointer is always an error.
+  reportBug("Pointer to _Optional object is used by an additive operator "
             "without a preceding check for null",
             N, BR);
 }
