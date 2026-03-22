@@ -6189,10 +6189,16 @@ def err_typecheck_invalid_restrict_not_pointer_noarg : Error<
   "restrict requires a pointer or reference">;
 def err_typecheck_invalid_restrict_invalid_pointee : Error<
   "pointer to function type %0 may not be 'restrict' qualified">;
-def err_typecheck_invalid_optional_not_pointee : Error<
-  "_Optional is only valid on a pointed-to object or incomplete type (%0 is invalid)">;
-def err_typecheck_invalid_optional_not_pointee_noarg : Error<
-  "_Optional is only valid on a pointed-to object or incomplete type">;
+def err_typecheck_invalid_optional_object : Error<
+  "object cannot have '_Optional' qualified type %0">;
+def err_typecheck_invalid_optional_function : Error<
+  "function cannot have '_Optional' qualified type %0">;
+def err_typecheck_invalid_optional_compound_literal : Error<
+  "compound literal cannot have '_Optional' qualified type %0">;
+def err_typecheck_invalid_optional_param : Error<
+  "function parameter cannot have '_Optional' qualified type %0">;
+def err_typecheck_invalid_optional_return : Error<
+  "function cannot return '_Optional' qualified type %0">;
 def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<

@@ -5119,13 +5119,6 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       Diag(DS.getRestrictSpecLoc(),
            diag::err_typecheck_invalid_restrict_not_pointer_noarg)
            << DS.getSourceRange();
-
-    // Types other than those of a pointed-to object or pointed-to incomplete
-    // type shall not be _Optional-qualified in a declaration.
-    if (TypeQuals & DeclSpec::TQ_optional)
-      Diag(DS.getOptionalSpecLoc(),
-           diag::err_typecheck_invalid_optional_not_pointee_noarg)
-          << DS.getSourceRange();
   }
 
   if (DS.isInlineSpecified())
@@ -7915,6 +7908,14 @@ NamedDecl *Sema::ActOnVariableDeclarator(
            diag::warn_static_local_in_extern_inline);
       MaybeSuggestAddingStaticToDecl(CurFD);
     }
+  }
+
+  // If an identifier for an object is declared, the type for the
+  // object or function shall not be optional-qualified
+  if (NewVD->getType().isOptionalQualified()) {
+    Diag(NewVD->getLocation(), diag::err_typecheck_invalid_optional_object)
+        << NewVD->getType();
+    NewVD->setInvalidDecl();
   }
 
   if (D.getDeclSpec().isModulePrivateSpecified()) {
@@ -10811,6 +10812,14 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         }
       }
     }
+  }
+
+  // If an identifier for a function is declared, the type for the
+  // object or function shall not be optional-qualified
+  if (NewFD->getType().isOptionalQualified()) {
+    Diag(NewFD->getLocation(), diag::err_typecheck_invalid_optional_function)
+        << NewFD->getType();
+    NewFD->setInvalidDecl();
   }
 
   ProcessPragmaWeak(S, NewFD);

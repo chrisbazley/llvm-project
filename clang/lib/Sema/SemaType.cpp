@@ -5029,11 +5029,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         if (T.isVolatileQualified() && S.getLangOpts().CPlusPlus20)
           S.Diag(DeclType.Loc, diag::warn_deprecated_volatile_return) << T;
 
-        // Types other than those of a pointed-to object or pointed-to incomplete type
-        // shall not be _Optional-qualified in a declaration.
+        // A function declarator shall not specify a return type that is
+        // optional-qualified.
         if (T.isOptionalQualified()) {
-          S.Diag(D.getDeclSpec().getOptionalSpecLoc(),
-                  diag::err_typecheck_invalid_optional_not_pointee)
+          S.Diag(DeclType.Loc,
+                  diag::err_typecheck_invalid_optional_return)
               << T;
         }
       }
@@ -5217,6 +5217,17 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             // OpenCL 2.0 s6.12.5: A block cannot be a parameter of a function.
             S.Diag(Param->getLocation(), diag::err_opencl_invalid_param)
                 << ParamTy << 1 /*hint off*/;
+            D.setInvalidType();
+          }
+          // QualType ParamType =
+          //    Context.getAdjustedParameterType(ParamTypes[Idx]);
+          else if (ParamTy.isOptionalQualified()) {
+            // After adjustment, the parameters in a parameter type list in a
+            // function declarator shall not have optional-qualified object or
+            // function type.
+            S.Diag(Param->getLocation(),
+                   diag::err_typecheck_invalid_optional_param)
+                << ParamTy;
             D.setInvalidType();
           }
 
@@ -5566,15 +5577,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         T = S.BuildParenType(T);
       }
     }
-  }
-
-  // Types other than those of a pointed-to object or pointed-to incomplete type
-  // shall not be _Optional-qualified in a declaration.
-  if (T.isOptionalQualified() && !IsTypedefName &&
-      (!T->isArrayType() || !D.isPrototypeContext())) {
-    S.Diag(D.getDeclSpec().getOptionalSpecLoc(),
-           diag::err_typecheck_invalid_optional_not_pointee)
-        << T;
   }
 
   // Apply any undistributed attributes from the declaration or declarator.

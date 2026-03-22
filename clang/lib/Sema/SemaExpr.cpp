@@ -7113,6 +7113,13 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
                SourceRange(LParenLoc, LiteralExpr->getSourceRange().getEnd())))
     return ExprError();
 
+  // The type name shall not specify an optional-qualified type.
+  if (literalType.isOptionalQualified()) {
+    Diag(LParenLoc, diag::err_typecheck_invalid_optional_compound_literal)
+        << literalType
+        << SourceRange(LParenLoc, LiteralExpr->getSourceRange().getEnd());
+  }
+
   InitializedEntity Entity
     = InitializedEntity::InitializeCompoundLiteralInit(TInfo);
   InitializationKind Kind
