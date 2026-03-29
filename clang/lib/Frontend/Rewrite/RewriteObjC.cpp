@@ -2021,7 +2021,7 @@ RewriteObjC::SynthesizeCallToFunctionDecl(FunctionDecl *FD,
                                                VK_LValue, SourceLocation());
 
   // Now, we cast the reference to a pointer to the objc_msgSend type.
-  QualType pToFunc = Context->getPointerType(msgSendType);
+  QualType pToFunc = Context->getFunctionDecayedType(msgSendType);
   ImplicitCastExpr *ICE =
       ImplicitCastExpr::Create(*Context, pToFunc, CK_FunctionToPointerDecay,
                                DRE, nullptr, VK_PRValue, FPOptionsOverride());

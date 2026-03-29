@@ -7654,7 +7654,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
   if (!AddressTaken && ParamType->isPointerType()) {
     if (Func) {
       // Function-to-pointer decay.
-      ArgType = S.Context.getPointerType(Func->getType());
+      ArgType = S.Context.getFunctionDecayedType(Func->getType());
     } else if (Entity->getType()->isArrayType()) {
       // Array-to-pointer decay.
       ArgType = S.Context.getArrayDecayedType(Entity->getType());
@@ -8591,7 +8591,7 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
   //   "function returning T" is adjusted to be of type "pointer to
   //   T" or "pointer to function returning T", respectively.
   if (ParamType->isArrayType())
-    ParamType = Context.getArrayDecayedType(ParamType);
+    ParamType = Context.getArrayAdjustedType(ParamType);
   else if (ParamType->isFunctionType())
     ParamType = Context.getPointerType(ParamType);
 

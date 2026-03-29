@@ -4475,7 +4475,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_Function_To_Pointer:
-    FromType = Context.getPointerType(FromType);
+    FromType = Context.getFunctionDecayedType(FromType);
     From = ImpCastExprToType(From, FromType, CK_FunctionToPointerDecay,
                              VK_PRValue, /*BasePath=*/nullptr, CCK)
                .get();

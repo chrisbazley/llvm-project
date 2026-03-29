@@ -87,7 +87,7 @@ static ExprResult CreateFunctionRefExpr(
       DRE->setType(Fn->getType());
     }
   }
-  return S.ImpCastExprToType(DRE, S.Context.getPointerType(DRE->getType()),
+  return S.ImpCastExprToType(DRE, S.Context.getFunctionDecayedType(DRE->getType()),
                              CK_FunctionToPointerDecay);
 }
 
@@ -2205,7 +2205,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // An lvalue of function type T can be converted to an rvalue of
     // type "pointer to T." The result is a pointer to the
     // function. (C++ 4.3p1).
-    FromType = S.Context.getPointerType(FromType);
+    FromType = S.Context.getFunctionDecayedType(FromType);
   } else {
     // We don't require any conversions for the first step.
     SCS.First = ICK_Identity;
@@ -8105,7 +8105,7 @@ void Sema::AddConversionCandidate(
   DeclRefExpr ConversionRef(Context, Conversion, false, Conversion->getType(),
                             VK_LValue, From->getBeginLoc());
   ImplicitCastExpr ConversionFn(ImplicitCastExpr::OnStack,
-                                Context.getPointerType(Conversion->getType()),
+                                Context.getFunctionDecayedType(Conversion->getType()),
                                 CK_FunctionToPointerDecay, &ConversionRef,
                                 VK_PRValue, FPOptionsOverride());
 

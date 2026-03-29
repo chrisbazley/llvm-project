@@ -16933,7 +16933,7 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
   if (ExDeclType->isArrayType())
     ExDeclType = Context.getArrayDecayedType(ExDeclType);
   else if (ExDeclType->isFunctionType())
-    ExDeclType = Context.getPointerType(ExDeclType);
+    ExDeclType = Context.getFunctionDecayedType(ExDeclType);
 
   // C++ 15.3p1: The exception-declaration shall not denote an incomplete type.
   // The exception-declaration shall not denote a pointer or reference to an

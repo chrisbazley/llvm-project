@@ -543,7 +543,7 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
         if (!checkAddressOfFunctionIsAvailable(FD, Diagnose, E->getExprLoc()))
           return ExprError();
 
-    E = ImpCastExprToType(E, Context.getPointerType(Ty),
+    E = ImpCastExprToType(E, Context.getFunctionDecayedType(Ty),
                           CK_FunctionToPointerDecay).get();
   } else if (Ty->isArrayType()) {
     // In C90 mode, arrays only promote to pointers if the array expression is
@@ -780,7 +780,7 @@ ExprResult Sema::CallExprUnaryConversions(Expr *E) {
   // Only do implicit cast for a function type, but not for a pointer
   // to function type.
   if (Ty->isFunctionType()) {
-    Res = ImpCastExprToType(E, Context.getPointerType(Ty),
+    Res = ImpCastExprToType(E, Context.getFunctionDecayedType(Ty),
                             CK_FunctionToPointerDecay);
     if (Res.isInvalid())
       return ExprError();

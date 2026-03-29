@@ -6083,7 +6083,7 @@ CanQualType ASTContext::getCanonicalParamType(QualType T) const {
   if (getLangOpts().HLSL && isa<ConstantArrayType>(Ty)) {
     Result = getArrayParameterType(QualType(Ty, 0));
   } else if (isa<ArrayType>(Ty)) {
-    Result = getArrayDecayedType(QualType(Ty,0));
+    Result = getArrayAdjustedType(QualType(Ty,0));
   } else if (isa<FunctionType>(Ty)) {
     Result = getPointerType(QualType(Ty, 0));
   } else {
@@ -7007,8 +7007,31 @@ QualType ASTContext::getAdjustedParameterType(QualType T) const {
   if (getLangOpts().HLSL && T->isConstantArrayType())
     return getArrayParameterType(T);
   if (T->isArrayType() || T->isFunctionType())
-    return getDecayedType(T);
+    return getAdjustedArrayOrFunctionParameterType(T);
   return T;
+}
+
+QualType ASTContext::getAdjustedArrayOrFunctionParameterType(QualType T) const {
+  assert((T->isArrayType() || T->isFunctionType()) && "T is not adjusted");
+
+  QualType Decayed;
+
+  // C99 6.7.5.3p7:
+  //   A declaration of a parameter as "array of type" shall be
+  //   adjusted to "qualified pointer to type", where the type
+  //   qualifiers (if any) are those specified within the [ and ] of
+  //   the array type derivation.
+  if (T->isArrayType())
+    Decayed = getArrayAdjustedType(T);
+
+  // C99 6.7.5.3p8:
+  //   A declaration of a parameter as "function returning type"
+  //   shall be adjusted to "pointer to function returning type", as
+  //   in 6.3.2.1.
+  if (T->isFunctionType())
+    Decayed = getPointerType(T);
+
+  return getDecayedType(T, Decayed);
 }
 
 QualType ASTContext::getSignatureParameterType(QualType T) const {
@@ -7030,13 +7053,13 @@ QualType ASTContext::getExceptionObjectType(QualType T) const {
   return T.getUnqualifiedType();
 }
 
-/// getArrayDecayedType - Return the properly qualified result of decaying the
+/// getArrayAdjustedType - Return the properly qualified result of adjusting the
 /// specified array type to a pointer.  This operation is non-trivial when
 /// handling typedefs etc.  The canonical type of "T" must be an array type,
 /// this returns a pointer to a properly qualified element of the array.
 ///
 /// See C99 6.7.5.3p7 and C99 6.3.2.1p3.
-QualType ASTContext::getArrayDecayedType(QualType Ty) const {
+QualType ASTContext::getArrayAdjustedType(QualType Ty) const {
   // Get the element type with 'getAsArrayType' so that we don't lose any
   // typedefs in the element type of the array.  This also handles propagation
   // of type qualifiers from the array type into the element type if present
@@ -7056,6 +7079,21 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
         AttributedType::getNullabilityAttrKind(*Nullability), Result, Result);
   }
   return Result;
+}
+
+QualType ASTContext::getArrayDecayedType(QualType Ty) const {
+  // Get the element type with 'getAsArrayType' so that we don't lose any
+  // typedefs in the element type of the array.  This also handles propagation
+  // of type qualifiers from the array type into the element type if present
+  // (C99 6.7.3p8).
+  const ArrayType *PrettyArrayType = getAsArrayType(Ty);
+  assert(PrettyArrayType && "Not an array type!");
+
+  return getPointerType(getNonOptionalType(PrettyArrayType->getElementType()));
+}
+
+QualType ASTContext::getFunctionDecayedType(QualType Ty) const {
+       return getPointerType(getNonOptionalType(Ty));
 }
 
 QualType ASTContext::getBaseElementType(const ArrayType *array) const {

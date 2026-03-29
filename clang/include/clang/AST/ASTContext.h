@@ -1385,6 +1385,10 @@ public:
   /// original array type.
   QualType getArrayParameterType(QualType Ty) const;
 
+  /// Return the uniqued reference to a specified pointer parameter type
+  /// from the original array or function type.
+  QualType getAdjustedArrayOrFunctionParameterType(QualType Ty) const;
+
   /// Return the uniqued reference to the atomic type for the specified
   /// type.
   QualType getAtomicType(QualType T) const;
@@ -2837,8 +2841,38 @@ public:
   /// type of \p T must be an array type, this returns a pointer to a properly
   /// qualified element of the array.
   ///
-  /// See C99 6.7.5.3p7 and C99 6.3.2.1p3.
+  /// The result is the same as for getArrayAdjustedType except that it is not
+  /// optional-qualified. The upshot is that expressions such as s->a (where s
+  /// is a pointer to an optional struct or union with a member of array type)
+  /// are treated like &s->a[0] and expressions like *a (where a is a pointer
+  /// to an optional array) are treated like &(*a)[0]. Optional-qualified
+  /// types should not appear other than as a result of dereferencing a
+  /// pointer.
+  ///
+  /// See C99 6.3.2.1p3.
   QualType getArrayDecayedType(QualType T) const;
+
+  /// Return the properly qualified result of decaying the specified
+  /// function type to a pointer.
+  ///
+  /// The result is the same as for getPointerType except that it is not
+  /// optional-qualified. The upshot is that an expression such as *f
+  /// (where f is a pointer to an optional function) is treated like &*f.
+  /// Optional-qualified types should not appear other than as a result of
+  /// dereferencing a pointer.
+  ///
+  /// See C99 6.3.2.1p3.
+  QualType getFunctionDecayedType(QualType T) const;
+
+  /// Return the properly qualified result of adjusting the specified
+  /// array type to a pointer.
+  ///
+  /// This operation is non-trivial when handling typedefs etc.  The canonical
+  /// type of \p T must be an array type, this returns a pointer to a properly
+  /// qualified element of the array.
+  ///
+  /// See C99 6.7.5.3p7
+  QualType getArrayAdjustedType(QualType T) const;
 
   /// Return the type that \p PromotableType will promote to: C99
   /// 6.3.1.1p2, assuming that \p PromotableType is a promotable integer type.

@@ -128,7 +128,7 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
   if (T->isArrayType())
     T = Context.getArrayDecayedType(T);
   else if (T->isFunctionType())
-    T = Context.getPointerType(T);
+    T = Context.getFunctionDecayedType(T);
 
   int Kind = 0;
   QualType PointeeT = T;

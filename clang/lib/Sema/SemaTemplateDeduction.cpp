@@ -4904,7 +4904,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     //     function-to-pointer standard conversion (4.3) is used in
     //     place of P for type deduction; otherwise,
     else if (P->isFunctionType())
-      P = Context.getPointerType(P);
+      P = Context.getFunctionDecayedType(P);
     //   - If P is a cv-qualified type, the top level cv-qualifiers of
     //     P's type are ignored for type deduction.
     else

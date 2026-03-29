@@ -270,7 +270,7 @@ static CallExpr *create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
         Call, Ty.getNonReferenceType(), CK_LValueToRValue);
   } else if (Ty->isLValueReferenceType() &&
              Call->getType()->isFunctionType()) {
-    Ty = C.getPointerType(Ty.getNonReferenceType());
+    Ty = C.getFunctionDecayedType(Ty.getNonReferenceType());
     SubExpr = M.makeImplicitCast(Call, Ty, CK_FunctionToPointerDecay);
   } else if (Ty->isLValueReferenceType()
              && Call->getType()->isPointerType()
