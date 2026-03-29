@@ -11085,7 +11085,14 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
     *CompLHSTy = LHSTy;
   }
 
-  return PExp->getType();
+  QualType resultType = PExp->getType();
+  if (resultType->isPointerType()) {
+    // The result of pointer arithmetic is not a null pointer (by definition).
+    auto PointeeType = resultType->getPointeeType();
+    resultType = Context.getPointerType(Context.getNonOptionalType(PointeeType));
+  }
+
+  return resultType;
 }
 
 // C99 6.5.6
@@ -11171,7 +11178,14 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                        /*AllowOnePastEnd*/true, /*IndexNegated*/true);
 
       if (CompLHSTy) *CompLHSTy = LHS.get()->getType();
-      return LHS.get()->getType();
+
+      QualType resultType = LHS.get()->getType();
+      if (resultType->isPointerType()) {
+        // The result of pointer arithmetic is not a null pointer (by definition).
+        auto PointeeType = resultType->getPointeeType();
+        resultType = Context.getPointerType(Context.getNonOptionalType(PointeeType));
+      }
+      return resultType;
     }
 
     // Handle pointer-pointer subtractions.
@@ -13941,6 +13955,9 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     // C99 6.5.2.4p2, 6.5.6p2
     if (!checkArithmeticOpPointerOperand(S, OpLoc, Op))
       return QualType();
+    // An incremented or decremented pointer is not a null pointer (by definition).
+    auto PointeeType = ResType->getPointeeType();
+    ResType = S.Context.getPointerType(S.Context.getNonOptionalType(PointeeType));
   } else if (ResType->isObjCObjectPointerType()) {
     // On modern runtimes, ObjC pointer arithmetic is forbidden.
     // Otherwise, we just need a complete type.
