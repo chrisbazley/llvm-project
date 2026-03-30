@@ -13955,9 +13955,6 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     // C99 6.5.2.4p2, 6.5.6p2
     if (!checkArithmeticOpPointerOperand(S, OpLoc, Op))
       return QualType();
-    // An incremented or decremented pointer is not a null pointer (by definition).
-    auto PointeeType = ResType->getPointeeType();
-    ResType = S.Context.getPointerType(S.Context.getNonOptionalType(PointeeType));
   } else if (ResType->isObjCObjectPointerType()) {
     // On modern runtimes, ObjC pointer arithmetic is forbidden.
     // Otherwise, we just need a complete type.
