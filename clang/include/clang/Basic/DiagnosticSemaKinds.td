@@ -6197,8 +6197,6 @@ def err_typecheck_invalid_optional_compound_literal : Error<
   "compound literal cannot have '_Optional' qualified type %0">;
 def err_typecheck_invalid_optional_param : Error<
   "function parameter cannot have '_Optional' qualified type %0">;
-def err_typecheck_invalid_optional_return : Error<
-  "function cannot return '_Optional' qualified type %0">;
 def err_typecheck_invalid_optional_member : Error<
   "member cannot have '_Optional' qualified type %0">;
 def ext_typecheck_zero_array_size : Extension<
