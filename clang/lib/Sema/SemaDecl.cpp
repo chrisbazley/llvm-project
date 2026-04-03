@@ -18688,6 +18688,13 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       InvalidDecl = true;
   }
 
+  // _Optional TS: A structure or union shall not contain a member with
+  // optional-qualified type.
+  if (!InvalidDecl && T.isOptionalQualified()) {
+    Diag(Loc, diag::err_typecheck_invalid_optional_member) << T;
+    InvalidDecl = true;
+  }
+
   // Fields can not have abstract class types
   if (!InvalidDecl && RequireNonAbstractType(Loc, T,
                                              diag::err_abstract_type_in_decl,
