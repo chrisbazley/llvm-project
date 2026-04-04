@@ -72,7 +72,7 @@ public:
         BlockGen(Builder, LI, SE, DT, ScalarMap, EscapeMap, ValueMap,
                  &ExprBuilder, StartBlock),
         RegionGen(BlockGen), DL(DL), LI(LI), SE(SE), DT(DT),
-        StartBlock(StartBlock) {}
+        StartBlock(StartBlock), GenDT(&DT), GenLI(&LI), GenSE(&SE) {}
 
   virtual ~IslNodeBuilder() = default;
 
@@ -90,6 +90,8 @@ public:
   /// @result An llvm::Value that is true if the condition holds and false
   ///         otherwise.
   Value *createRTC(isl_ast_expr *Condition);
+
+  void generateBeginScopTrace();
 
   void create(__isl_take isl_ast_node *Node);
 
@@ -112,7 +114,7 @@ public:
   BlockGenerator &getBlockGenerator() { return BlockGen; }
 
   /// Return the parallel subfunctions that have been created.
-  const ArrayRef<Function *> getParallelSubfunctions() const {
+  ArrayRef<Function *> getParallelSubfunctions() const {
     return ParallelSubfunctions;
   }
 
@@ -146,6 +148,13 @@ protected:
   ScalarEvolution &SE;
   DominatorTree &DT;
   BasicBlock *StartBlock;
+
+  /// Relates to the region where the code is emitted into.
+  /// @{
+  DominatorTree *GenDT;
+  LoopInfo *GenLI;
+  ScalarEvolution *GenSE;
+  /// @}
 
   /// The current iteration of out-of-scop loops
   ///
@@ -245,18 +254,6 @@ protected:
   void getReferencesInSubtree(const isl::ast_node &For,
                               SetVector<Value *> &Values,
                               SetVector<const Loop *> &Loops);
-
-  /// Change the llvm::Value(s) used for code generation.
-  ///
-  /// When generating code certain values (e.g., references to induction
-  /// variables or array base pointers) in the original code may be replaced by
-  /// new values. This function allows to (partially) update the set of values
-  /// used. A typical use case for this function is the case when we continue
-  /// code generation in a subfunction/kernel function and need to explicitly
-  /// pass down certain values.
-  ///
-  /// @param NewValues A map that maps certain llvm::Values to new llvm::Values.
-  void updateValues(ValueMapT &NewValues);
 
   /// Return the most up-to-date version of the llvm::Value for code generation.
   /// @param Original The Value to check for an up to date version.

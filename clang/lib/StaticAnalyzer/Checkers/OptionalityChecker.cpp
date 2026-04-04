@@ -144,8 +144,7 @@ ExplodedNode *OptionalityChecker::getNodeIfBug(CheckerContext &C,
   if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
     return nullptr;
 
-  static CheckerProgramPointTag Tag(this, "OptionalityChecker");
-  return C.generateErrorNode(State, &Tag);
+  return C.generateErrorNode(State);
 }
 
 void OptionalityChecker::verifyIncDec(CheckerContext &C, const Expr *E) const {

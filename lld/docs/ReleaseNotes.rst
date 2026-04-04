@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -26,24 +29,16 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``--compress-sections <section-glib>={none,zlib,zstd}[:level]`` is added to compress
-  matched output sections without the ``SHF_ALLOC`` flag.
-  (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
-  (`#90567 <https://github.com/llvm/llvm-project/pull/90567>`_)
-* The default compression level for zlib is now independent of linker
-  optimization level (``Z_BEST_SPEED``).
-* ``GNU_PROPERTY_AARCH64_FEATURE_PAUTH`` notes, ``R_AARCH64_AUTH_ABS64`` and
-  ``R_AARCH64_AUTH_RELATIVE`` relocations are now supported.
-  (`#72714 <https://github.com/llvm/llvm-project/pull/72714>`_)
-* ``--debug-names`` is added to create a merged ``.debug_names`` index
-  from input ``.debug_names`` sections. Type units are not handled yet.
-  (`#86508 <https://github.com/llvm/llvm-project/pull/86508>`_)
-* ``--enable-non-contiguous-regions`` option allows automatically packing input
-  sections into memory regions by automatically spilling to later matches if a
-  region would overflow. This reduces the toil of manually packing regions
-  (typical for embedded). It also makes full LTO feasible in such cases, since
-  IR merging currently prevents the linker script from referring to input
-  files. (`#90007 <https://github.com/llvm/llvm-project/pull/90007>`_)
+* Added ``--bp-compression-sort-section=<glob>[=<layout_priority>[=<match_priority>]]``,
+  replacing the old coarse ``--bp-compression-sort`` modes with a way to split
+  input sections into multiple compression groups, run balanced partitioning
+  independently per group, and leave out sections that are poor candidates for
+  BP.
+  ``layout_priority`` controls group placement order (lower value = placed
+  first, default 0). ``match_priority`` resolves conflicts when multiple globs
+  match the same section (lower value = higher priority; explicit priority
+  beats positional last-match-wins; default: positional). In ELF, the glob
+  matches input section names (e.g. ``.text.unlikely.code1``).
 
 Breaking changes
 ----------------
@@ -56,6 +51,10 @@ MinGW Improvements
 
 MachO Improvements
 ------------------
+
+* ``--bp-compression-sort-section`` now accepts optional layout and match
+  priorities (same syntax as ELF). In Mach-O, the glob matches the
+  concatenated segment+section name (e.g. ``__TEXT__text``).
 
 WebAssembly Improvements
 ------------------------

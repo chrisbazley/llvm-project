@@ -992,7 +992,7 @@ define i64 @getvelsl(<2 x i64> %vsl, i32 signext %i) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    add 5, 3, 3
 ; CHECK-NEXT:    addi 4, 1, -16
-; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 28
 ; CHECK-NEXT:    addi 5, 5, 1
 ; CHECK-NEXT:    stxvw4x 34, 0, 4
 ; CHECK-NEXT:    rlwinm 5, 5, 2, 28, 29
@@ -1010,7 +1010,7 @@ define i64 @getvelul(<2 x i64> %vul, i32 signext %i) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    add 5, 3, 3
 ; CHECK-NEXT:    addi 4, 1, -16
-; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 28
 ; CHECK-NEXT:    addi 5, 5, 1
 ; CHECK-NEXT:    stxvw4x 34, 0, 4
 ; CHECK-NEXT:    rlwinm 5, 5, 2, 28, 29
@@ -1099,7 +1099,6 @@ define double @getd1(<2 x double> %vd) {
 ; CHECK-LABEL: getd1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxswapd 1, 34
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %vd, i32 1
@@ -1115,7 +1114,6 @@ define double @getveld(<2 x double> %vd, i32 signext %i) {
 ; CHECK-NEXT:    lvsl 3, 0, 3
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    xxlor 1, 34, 34
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %vd, i32 %i

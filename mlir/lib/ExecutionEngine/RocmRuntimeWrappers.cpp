@@ -38,7 +38,8 @@ extern "C" hipModule_t mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   return module;
 }
 
-extern "C" hipModule_t mgpuModuleLoadJIT(void *data, int optLevel) {
+extern "C" hipModule_t mgpuModuleLoadJIT(void *data, int optLevel,
+                                         size_t /*assmeblySize*/) {
   assert(false && "This function is not available in HIP.");
   return nullptr;
 }
@@ -126,6 +127,13 @@ extern "C" void mgpuMemset32(void *dst, int value, size_t count,
   HIP_REPORT_IF_ERROR(hipMemsetD32Async(reinterpret_cast<hipDeviceptr_t>(dst),
                                         value, count, stream));
 }
+
+extern "C" void mgpuMemset16(void *dst, int short value, size_t count,
+                             hipStream_t stream) {
+  HIP_REPORT_IF_ERROR(hipMemsetD16Async(reinterpret_cast<hipDeviceptr_t>(dst),
+                                        value, count, stream));
+}
+
 /// Helper functions for writing mlir example code
 
 // Allows to register byte array with the ROCM runtime. Helpful until we have

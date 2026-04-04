@@ -15,16 +15,13 @@
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -32,65 +29,31 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
+namespace {
 
 class SPIRVMergeRegionExitTargets : public FunctionPass {
 public:
   static char ID;
 
-  SPIRVMergeRegionExitTargets() : FunctionPass(ID) {
-    initializeSPIRVMergeRegionExitTargetsPass(*PassRegistry::getPassRegistry());
-  };
-
-  // Gather all the successors of |BB|.
-  // This function asserts if the terminator neither a branch, switch or return.
-  std::unordered_set<BasicBlock *> gatherSuccessors(BasicBlock *BB) {
-    std::unordered_set<BasicBlock *> output;
-    auto *T = BB->getTerminator();
-
-    if (auto *BI = dyn_cast<BranchInst>(T)) {
-      output.insert(BI->getSuccessor(0));
-      if (BI->isConditional())
-        output.insert(BI->getSuccessor(1));
-      return output;
-    }
-
-    if (auto *SI = dyn_cast<SwitchInst>(T)) {
-      output.insert(SI->getDefaultDest());
-      for (auto &Case : SI->cases())
-        output.insert(Case.getCaseSuccessor());
-      return output;
-    }
-
-    assert(isa<ReturnInst>(T) && "Unhandled terminator type.");
-    return output;
-  }
+  SPIRVMergeRegionExitTargets() : FunctionPass(ID) {}
 
   /// Create a value in BB set to the value associated with the branch the block
   /// terminator will take.
   llvm::Value *createExitVariable(
       BasicBlock *BB,
-      const std::unordered_map<BasicBlock *, ConstantInt *> &TargetToValue) {
+      const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue) {
     auto *T = BB->getTerminator();
     if (isa<ReturnInst>(T))
       return nullptr;
+    if (auto *BI = dyn_cast<UncondBrInst>(T))
+      return TargetToValue.lookup(BI->getSuccessor());
 
     IRBuilder<> Builder(BB);
     Builder.SetInsertPoint(T);
 
-    if (auto *BI = dyn_cast<BranchInst>(T)) {
-
-      BasicBlock *LHSTarget = BI->getSuccessor(0);
-      BasicBlock *RHSTarget =
-          BI->isConditional() ? BI->getSuccessor(1) : nullptr;
-
-      Value *LHS = TargetToValue.count(LHSTarget) != 0
-                       ? TargetToValue.at(LHSTarget)
-                       : nullptr;
-      Value *RHS = TargetToValue.count(RHSTarget) != 0
-                       ? TargetToValue.at(RHSTarget)
-                       : nullptr;
+    if (auto *BI = dyn_cast<CondBrInst>(T)) {
+      Value *LHS = TargetToValue.lookup(BI->getSuccessor(0));
+      Value *RHS = TargetToValue.lookup(BI->getSuccessor(1));
 
       if (LHS == nullptr || RHS == nullptr)
         return LHS == nullptr ? RHS : LHS;
@@ -98,44 +61,24 @@ public:
     }
 
     // TODO: add support for switch cases.
-    assert(false && "Unhandled terminator type.");
+    llvm_unreachable("Unhandled terminator type.");
   }
 
-  /// Replaces |BB|'s branch targets present in |ToReplace| with |NewTarget|.
-  void replaceBranchTargets(BasicBlock *BB,
-                            const std::unordered_set<BasicBlock *> ToReplace,
-                            BasicBlock *NewTarget) {
-    auto *T = BB->getTerminator();
-    if (isa<ReturnInst>(T))
-      return;
-
-    if (auto *BI = dyn_cast<BranchInst>(T)) {
-      for (size_t i = 0; i < BI->getNumSuccessors(); i++) {
-        if (ToReplace.count(BI->getSuccessor(i)) != 0)
-          BI->setSuccessor(i, NewTarget);
-      }
-      return;
-    }
-
-    if (auto *SI = dyn_cast<SwitchInst>(T)) {
-      for (size_t i = 0; i < SI->getNumSuccessors(); i++) {
-        if (ToReplace.count(SI->getSuccessor(i)) != 0)
-          SI->setSuccessor(i, NewTarget);
-      }
-      return;
-    }
-
-    assert(false && "Unhandled terminator type.");
+  AllocaInst *CreateVariable(Function &F, Type *Type,
+                             BasicBlock::iterator Position) {
+    const DataLayout &DL = F.getDataLayout();
+    return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
+                          Position);
   }
 
   // Run the pass on the given convergence region, ignoring the sub-regions.
   // Returns true if the CFG changed, false otherwise.
   bool runOnConvergenceRegionNoRecurse(LoopInfo &LI,
-                                       const SPIRV::ConvergenceRegion *CR) {
+                                       SPIRV::ConvergenceRegion *CR) {
     // Gather all the exit targets for this region.
-    std::unordered_set<BasicBlock *> ExitTargets;
+    SmallPtrSet<BasicBlock *, 4> ExitTargets;
     for (BasicBlock *Exit : CR->Exits) {
-      for (BasicBlock *Target : gatherSuccessors(Exit)) {
+      for (BasicBlock *Target : successors(Exit)) {
         if (CR->Blocks.count(Target) == 0)
           ExitTargets.insert(Target);
       }
@@ -149,6 +92,9 @@ public:
     auto F = CR->Entry->getParent();
     auto NewExitTarget = BasicBlock::Create(F->getContext(), "new.exit", F);
     IRBuilder<> Builder(NewExitTarget);
+
+    AllocaInst *Variable = CreateVariable(*F, Builder.getInt32Ty(),
+                                          F->begin()->getFirstInsertionPt());
 
     // CodeGen output needs to be stable. Using the set as-is would order
     // the targets differently depending on the allocation pattern.
@@ -164,36 +110,45 @@ public:
 
     // Creating one constant per distinct exit target. This will be route to the
     // correct target.
-    std::unordered_map<BasicBlock *, ConstantInt *> TargetToValue;
+    DenseMap<BasicBlock *, ConstantInt *> TargetToValue;
     for (BasicBlock *Target : SortedExitTargets)
-      TargetToValue.emplace(Target, Builder.getInt32(TargetToValue.size()));
+      TargetToValue.insert(
+          std::make_pair(Target, Builder.getInt32(TargetToValue.size())));
 
     // Creating one variable per exit node, set to the constant matching the
     // targeted external block.
     std::vector<std::pair<BasicBlock *, Value *>> ExitToVariable;
     for (auto Exit : SortedExits) {
       llvm::Value *Value = createExitVariable(Exit, TargetToValue);
+      IRBuilder<> B2(Exit);
+      B2.SetInsertPoint(Exit->getFirstInsertionPt());
+      B2.CreateStore(Value, Variable);
       ExitToVariable.emplace_back(std::make_pair(Exit, Value));
     }
 
-    // Gather the correct value depending on the exit we came from.
-    llvm::PHINode *node =
-        Builder.CreatePHI(Builder.getInt32Ty(), ExitToVariable.size());
-    for (auto [BB, Value] : ExitToVariable) {
-      node->addIncoming(Value, BB);
-    }
+    llvm::Value *Load = Builder.CreateLoad(Builder.getInt32Ty(), Variable);
 
     // Creating the switch to jump to the correct exit target.
-    std::vector<std::pair<BasicBlock *, ConstantInt *>> CasesList(
-        TargetToValue.begin(), TargetToValue.end());
-    llvm::SwitchInst *Sw =
-        Builder.CreateSwitch(node, CasesList[0].first, CasesList.size() - 1);
-    for (size_t i = 1; i < CasesList.size(); i++)
-      Sw->addCase(CasesList[i].second, CasesList[i].first);
+    llvm::SwitchInst *Sw = Builder.CreateSwitch(Load, SortedExitTargets[0],
+                                                SortedExitTargets.size() - 1);
+    for (size_t i = 1; i < SortedExitTargets.size(); i++) {
+      BasicBlock *BB = SortedExitTargets[i];
+      Sw->addCase(TargetToValue[BB], BB);
+    }
 
     // Fix exit branches to redirect to the new exit.
-    for (auto Exit : CR->Exits)
-      replaceBranchTargets(Exit, ExitTargets, NewExitTarget);
+    for (auto Exit : CR->Exits) {
+      Instruction *T = Exit->getTerminator();
+      for (auto I = succ_begin(T), E = succ_end(T); I != E; ++I)
+        if (ExitTargets.contains(*I))
+          I.getUse()->set(NewExitTarget);
+    }
+
+    CR = CR->Parent;
+    while (CR) {
+      CR->Blocks.insert(NewExitTarget);
+      CR = CR->Parent;
+    }
 
     return true;
   }
@@ -201,8 +156,7 @@ public:
   /// Run the pass on the given convergence region and sub-regions (DFS).
   /// Returns true if a region/sub-region was modified, false otherwise.
   /// This returns as soon as one region/sub-region has been modified.
-  bool runOnConvergenceRegion(LoopInfo &LI,
-                              const SPIRV::ConvergenceRegion *CR) {
+  bool runOnConvergenceRegion(LoopInfo &LI, SPIRV::ConvergenceRegion *CR) {
     for (auto *Child : CR->Children)
       if (runOnConvergenceRegion(LI, Child))
         return true;
@@ -219,8 +173,7 @@ public:
 
     std::unordered_set<BasicBlock *> ExitTargets;
     for (auto *Exit : CR->Exits) {
-      auto Set = gatherSuccessors(Exit);
-      for (auto *BB : Set) {
+      for (auto *BB : successors(Exit)) {
         if (CR->Blocks.count(BB) == 0)
           ExitTargets.insert(BB);
       }
@@ -230,12 +183,12 @@ public:
   }
 #endif
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    const auto *TopLevelRegion =
+    auto *TopLevelRegion =
         getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
             .getRegionInfo()
-            .getTopLevelRegion();
+            .getWritableTopLevelRegion();
 
     // FIXME: very inefficient method: each time a region is modified, we bubble
     // back up, and recompute the whole convergence region tree. Once the
@@ -243,9 +196,6 @@ public:
     // to be efficient instead of simple.
     bool modified = false;
     while (runOnConvergenceRegion(LI, TopLevelRegion)) {
-      TopLevelRegion = getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
-                           .getRegionInfo()
-                           .getTopLevelRegion();
       modified = true;
     }
 
@@ -259,10 +209,12 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
+
+    AU.addPreserved<SPIRVConvergenceRegionAnalysisWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 };
-} // namespace llvm
+} // namespace
 
 char SPIRVMergeRegionExitTargets::ID = 0;
 
