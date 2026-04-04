@@ -3090,7 +3090,15 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // indicates dereferenceability, and if the size is constant we can
             // use the dereferenceable attribute (which requires the size in
             // bytes).
-            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static) {
+            // _Optional TS: If the keyword static also appears within the
+            // [ and ] of the array type derivation in a declaration of a
+            // function parameter as "array of optional-qualified type", then
+            // for each call to the function, the value of the corresponding
+            // actual argument shall either be null pointer or provide access to
+            // the first element of an array with at least as many elements as
+            // specified by the size expression.
+            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static &&
+                !ArrTy->getElementType().isOptionalQualified()) {
               QualType ETy = ArrTy->getElementType();
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();
@@ -3114,7 +3122,10 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // For C99 VLAs with the static keyword, we don't know the size so
             // we can't use the dereferenceable attribute, but in addrspace(0)
             // we know that it must be nonnull.
-            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static) {
+            // Optional TS: except for a function parameter declared as
+            // "array of optional-qualified type". (See above.)
+            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static &&
+                !ArrTy->getElementType().isOptionalQualified()) {
               QualType ETy = ArrTy->getElementType();
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();

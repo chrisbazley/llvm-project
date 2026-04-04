@@ -6085,6 +6085,13 @@ static void DiagnoseCalleeStaticArrayParam(Sema &S, ParmVarDecl *PVD) {
 /// array type derivation, then for each call to the function, the value of the
 /// corresponding actual argument shall provide access to the first element of
 /// an array with at least as many elements as specified by the size expression.
+///
+/// _Optional TS: If the keyword static also appears within the [ and ] of the
+/// array type derivation in a declaration of a function parameter as "array of
+/// optional-qualified type", then for each call to the function, the value of
+/// the corresponding actual argument shall either be a null pointer or provide
+/// access to the first element of an array with at least as many elements as
+/// specified by the size expression.
 void
 Sema::CheckStaticArrayArgument(SourceLocation CallLoc,
                                ParmVarDecl *Param,
@@ -6099,7 +6106,8 @@ Sema::CheckStaticArrayArgument(SourceLocation CallLoc,
   if (!AT || AT->getSizeModifier() != ArraySizeModifier::Static)
     return;
 
-  if (ArgExpr->isNullPointerConstant(Context,
+  if (!AT->getElementType().isOptionalQualified() &&
+      ArgExpr->isNullPointerConstant(Context,
                                      Expr::NPC_NeverValueDependent)) {
     Diag(CallLoc, diag::warn_null_arg) << ArgExpr->getSourceRange();
     DiagnoseCalleeStaticArrayParam(*this, Param);
