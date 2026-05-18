@@ -1,0 +1,2 @@
+[*.{c,h,cpp,hpp,cc,hh,cxx,hxx}]
+end_of_line = lf
