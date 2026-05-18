@@ -1,0 +1,2 @@
+[*.{c,h,cpp,hpp,cc,hh,cxx,hxx}]
+max_line_length = 120
