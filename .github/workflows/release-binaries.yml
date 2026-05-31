@@ -164,7 +164,7 @@ jobs:
 
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04* | windows-2022)
-            build_runs_on="depot-${{ inputs.runs-on }}-16"
+            build_runs_on="${{ inputs.runs-on }}"
             test_runs_on=$build_runs_on
             ;;
           windows-11-arm)
@@ -176,11 +176,7 @@ jobs:
             test_runs_on=$build_runs_on
             ;;
           macos-14)
-            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
-            else
-              build_runs_on="depot-macos-14"
-            fi
+            build_runs_on="${{ inputs.runs-on }}"
             test_runs_on="${{ inputs.runs-on }}"
             ;;
           *)
