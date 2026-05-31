@@ -110,7 +110,7 @@ jobs:
         trimmed=$(echo ${{ inputs.release-version }} | xargs)
         if [ -n "$trimmed" ]; then
           release_version="$trimmed"
-          ref="llvmorg-$release_version"
+          ref="$release_version"
         else
           if [ "$RUNNER_OS" = "Windows" ]; then
             release_version="$LLVM_VERSION_FROM_SOURCE"
