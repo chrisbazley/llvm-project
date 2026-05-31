@@ -87,15 +87,6 @@ jobs:
       run: |
         pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
-    - name: Check Permissions
-      if: github.event_name != 'pull_request'
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-        USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
-      shell: bash
-      run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
-
     # The name of the Windows binaries uses the version from source, so we need
     # to fetch it here.
     - id: version-from-source
