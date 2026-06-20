@@ -368,6 +368,11 @@ public:
   /// an invalid type.
   CompilerType AddVolatileModifier() const;
 
+  /// Return a new CompilerType adds a volatile modifier to this type if this
+  /// type is valid and the type system supports optional  modifiers, else return
+  /// an invalid type.
+  CompilerType AddOptionalModifier() const;
+
   /// Return a new CompilerType that is the atomic type of this type. If this
   /// type is not valid or the type system doesn't support atomic types, this
   /// returns an invalid type.

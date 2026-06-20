@@ -604,6 +604,7 @@ TEST_F(TestTypeSystemClang, TestRemoveFastQualifiers) {
   EXPECT_EQ(0u, qt.getLocalFastQualifiers());
   record_type = record_type.AddConstModifier();
   record_type = record_type.AddVolatileModifier();
+  record_type = record_type.AddOptionalModifier();
   record_type = record_type.AddRestrictModifier();
   qt = ClangUtil::GetQualType(record_type);
   EXPECT_NE(0u, qt.getLocalFastQualifiers());

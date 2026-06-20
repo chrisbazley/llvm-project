@@ -387,6 +387,9 @@ SymbolFileCTF::CreateModifier(const CTFModifier &ctf_modifier) {
   case CTFType::eVolatile:
     compiler_type = ref_type->GetFullCompilerType().AddVolatileModifier();
     break;
+  case CTFType::eOptional:
+    compiler_type = ref_type->GetFullCompilerType().AddOptionalModifier();
+    break;
   case CTFType::eRestrict:
     compiler_type = ref_type->GetFullCompilerType().AddRestrictModifier();
     break;

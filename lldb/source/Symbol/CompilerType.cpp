@@ -730,6 +730,13 @@ CompilerType CompilerType::AddVolatileModifier() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::AddOptionalModifier() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddOptionalModifier(m_type);
+  return CompilerType();
+}
+
 CompilerType CompilerType::AddRestrictModifier() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())

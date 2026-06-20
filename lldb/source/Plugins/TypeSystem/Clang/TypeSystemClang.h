@@ -803,6 +803,8 @@ public:
 
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType AddOptionalModifier(lldb::opaque_compiler_type_t type) override;
+
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
 
   /// Using the current type, create a new typedef to that type using

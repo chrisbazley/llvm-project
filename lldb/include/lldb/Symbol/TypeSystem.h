@@ -303,6 +303,8 @@ public:
 
   virtual CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type);
 
+  virtual CompilerType AddOptionalModifier(lldb::opaque_compiler_type_t type);
+
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
 
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,

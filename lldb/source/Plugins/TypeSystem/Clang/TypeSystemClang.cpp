@@ -4594,6 +4594,16 @@ TypeSystemClang::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
 }
 
 CompilerType
+TypeSystemClang::AddOptionalModifier(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType result(GetQualType(type));
+    result.addOptional();
+    return GetType(result);
+  }
+  return CompilerType();
+}
+
+CompilerType
 TypeSystemClang::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));

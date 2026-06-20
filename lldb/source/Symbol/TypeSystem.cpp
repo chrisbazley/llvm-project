@@ -100,6 +100,11 @@ TypeSystem::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
 }
 
 CompilerType
+TypeSystem::AddOptionalModifier(lldb::opaque_compiler_type_t type) {
+  return CompilerType();
+}
+
+CompilerType
 TypeSystem::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
