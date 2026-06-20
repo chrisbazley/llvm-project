@@ -1277,9 +1277,9 @@ struct DeclaratorChunk {
   ParsedAttributesView AttrList;
 
   struct PointerTypeInfo {
-    /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
+    /// The type qualifiers: const/volatile/_Optional/restrict/unaligned/atomic.
     LLVM_PREFERRED_TYPE(DeclSpec::TQ)
-    unsigned TypeQuals : 5;
+    unsigned TypeQuals : 6;
 
     /// The location of the const-qualifier, if any.
     SourceLocation ConstQualLoc;
@@ -1322,9 +1322,9 @@ struct DeclaratorChunk {
 
   struct ArrayTypeInfo {
     /// The type qualifiers for the array:
-    /// const/volatile/restrict/__unaligned/_Atomic.
+    /// const/volatile/_Optional/restrict/__unaligned/_Atomic.
     LLVM_PREFERRED_TYPE(DeclSpec::TQ)
-    unsigned TypeQuals : 5;
+    unsigned TypeQuals : 6;
 
     /// True if this dimension included the 'static' keyword.
     LLVM_PREFERRED_TYPE(bool)
@@ -1619,18 +1619,18 @@ struct DeclaratorChunk {
 
   struct BlockPointerTypeInfo {
     /// For now, sema will catch these as invalid.
-    /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
+    /// The type qualifiers: const/volatile/_Optional/restrict/__unaligned/_Atomic.
     LLVM_PREFERRED_TYPE(DeclSpec::TQ)
-    unsigned TypeQuals : 5;
+    unsigned TypeQuals : 6;
 
     void destroy() {
     }
   };
 
   struct MemberPointerTypeInfo {
-    /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
+    /// The type qualifiers: const/volatile/_Optional/restrict/__unaligned/_Atomic.
     LLVM_PREFERRED_TYPE(DeclSpec::TQ)
-    unsigned TypeQuals : 5;
+    unsigned TypeQuals : 6;
     /// Location of the '*' token.
     SourceLocation StarLoc;
     // CXXScopeSpec has a constructor, so it can't be a direct member.

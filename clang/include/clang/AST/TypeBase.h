@@ -1974,7 +1974,7 @@ protected:
     /// CVR qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
     LLVM_PREFERRED_TYPE(Qualifiers)
-    unsigned IndexTypeQuals : 3;
+    unsigned IndexTypeQuals : 4;
 
     /// Storage class qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
