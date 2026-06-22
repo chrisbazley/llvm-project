@@ -1262,7 +1262,7 @@ bool DIARawSymbol::isVolatileType() const {
 }
 
 bool DIARawSymbol::isOptionalType() const {
-  return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_optionalType);
+  return false;
 }
 
 bool DIARawSymbol::wasInlined() const {
