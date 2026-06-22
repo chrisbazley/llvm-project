@@ -569,6 +569,7 @@ llvm::Expected<TypeSP> SymbolFileCTF::CreateType(CTFType *ctf_type) {
   case CTFType::Kind::ePointer:
   case CTFType::Kind::eRestrict:
   case CTFType::Kind::eVolatile:
+  case CTFType::Kind::eOptional:
     return CreateModifier(*static_cast<CTFModifier *>(ctf_type));
   case CTFType::Kind::eTypedef:
     return CreateTypedef(*static_cast<CTFTypedef *>(ctf_type));
