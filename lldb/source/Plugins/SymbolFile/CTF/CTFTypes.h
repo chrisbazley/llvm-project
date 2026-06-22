@@ -31,6 +31,7 @@ struct CTFType {
     eConst = 12,
     eRestrict = 13,
     eSlice = 14,
+    eOptional = 15,
   };
 
   Kind kind;
