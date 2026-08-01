@@ -1981,7 +1981,7 @@ protected:
     LLVM_PREFERRED_TYPE(ArraySizeModifier)
     unsigned SizeModifier : 3;
   };
-  enum { NumArrayTypeBits = NumTypeBits + 6 };
+  enum { NumArrayTypeBits = NumTypeBits + 7 };
 
   class ConstantArrayTypeBitfields {
     friend class ConstantArrayType;
