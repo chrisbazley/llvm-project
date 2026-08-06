@@ -1,108 +1,119 @@
-name: Release Binaries All
-
-permissions:
-  contents: read # Default everything to read-only
+name: Release Clang Binaries
 
 on:
-  schedule:
-    - cron: "0 0 * * 6"
   workflow_dispatch:
     inputs:
       release-version:
-        description: 'Release Version'
+        description: "Release tag (for example optional-clang-23.0.0)"
         required: true
         type: string
       upload:
-        description: 'Upload binaries to the release page'
+        description: "Also attach the binaries to a GitHub Release"
         required: true
         default: false
         type: boolean
 
-  workflow_call:
-    inputs:
-      release-version:
-        description: 'Release Version'
-        required: true
-        type: string
-      upload:
-        description: 'Upload binaries to the release page'
-        required: true
-        default: false
-        type: boolean
-    secrets:
-      RELEASE_TASKS_USER_TOKEN:
-        description: "Secret used to check user permissions."
-        required: false
-
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      # When a PR is closed, we still start this workflow, but then skip
-      # all the jobs, which makes it effectively a no-op.  The reason to
-      # do this is that it allows us to take advantage of concurrency groups
-      # to cancel in progress CI jobs whenever the PR is closed.
-      - closed
-    paths:
-      - '.github/workflows/release-binaries-all.yml'
-      - '.github/workflows/release-binaries.yml'
-      - '.github/workflows/release-binaries-setup-stage/*'
-      - '.github/workflows/release-binaries-save-stage/*'
-      - 'clang/cmake/caches/Release.cmake'
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'dispatch' }}
-  cancel-in-progress: True
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  setup-variables:
-    if: >-
-      (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: ubuntu-24.04
-    outputs:
-      release-version: ${{ steps.vars.outputs.release-version }}
-      upload: ${{ steps.vars.outputs.upload }}
-    steps:
-      - shell: bash
-        id: vars
-        run: |
-          upload="${{ inputs.upload }}"
-          release_version="${{ inputs.release-version }}"
-          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.event_name }}" = "schedule" ]; then
-            upload="false"
-            release_version=""
-          fi
-          echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
-          echo "upload=$upload" >> "$GITHUB_OUTPUT"
-
-  release-binaries-all:
-    name: Build Release Binaries
-    needs:
-      - setup-variables
-    permissions:
-      contents: write # For release uploads
-      id-token: write     # For artifact attestations
-      attestations: write # For artifact attestations
+  build:
+    name: Build Clang (${{ matrix.name }})
     strategy:
       fail-fast: false
       matrix:
-        # We use ubuntu-22.04 rather than the latest version to make the built
-        # binaries more portable (eg functional aginast older glibc).
-        runs-on:
-          - ubuntu-22.04
-          - ubuntu-22.04-arm
-          - macos-14
-          - windows-2022
-          - windows-11-arm
+        include:
+          - name: linux-x86_64
+            runs-on: ubuntu-22.04
+          - name: macos-arm64
+            runs-on: macos-14
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 240
 
-    uses: ./.github/workflows/release-binaries.yml
-    with:
-      release-version: "${{ needs.setup-variables.outputs.release-version }}"
-      upload: ${{ needs.setup-variables.outputs.upload == 'true'}}
-      runs-on: "${{ matrix.runs-on }}"
-    secrets:
-      # This will be empty for pull_request events, but that's fine, because
-      # the release-binaries workflow does not use this secret for the
-      # pull_request event.
-      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure a Clang-only release build
+        shell: bash
+        run: |
+          cmake -S llvm -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
+            -DLLVM_ENABLE_PROJECTS=clang \
+            -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" \
+            -DLLVM_ENABLE_ASSERTIONS=OFF \
+            -DLLVM_ENABLE_TERMINFO=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DCLANG_INCLUDE_TESTS=OFF \
+            -DLLVM_DISTRIBUTION_COMPONENTS="clang;clang-resource-headers"
+
+      - name: Build and install Clang
+        shell: bash
+        run: cmake --build build --target install-distribution --parallel 2
+
+      - name: Verify _Optional support
+        shell: bash
+        run: |
+          install/bin/clang --version
+          cat > optional-smoke-test.c <<'EOF'
+          int value_or_zero(_Optional int *value) {
+            return value == nullptr ? 0 : *value;
+          }
+          EOF
+          install/bin/clang -std=c2y -fsyntax-only optional-smoke-test.c
+
+      - name: Package
+        id: package
+        shell: bash
+        env:
+          VERSION: ${{ inputs.release-version }}
+          PLATFORM: ${{ matrix.name }}
+        run: |
+          archive="clang+llvm-${VERSION}-${PLATFORM}.tar.xz"
+          tar -C install -cJf "$archive" .
+          shasum -a 256 "$archive" > "$archive.sha256"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: optional-clang-${{ matrix.name }}
+          path: |
+            ${{ steps.package.outputs.archive }}
+            ${{ steps.package.outputs.archive }}.sha256
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    if: ${{ inputs.upload }}
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: optional-clang-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create release and upload binaries
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release-version }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --generate-notes --title "$TAG"
+          fi
+          gh release upload "$TAG" release-assets/* --clobber
