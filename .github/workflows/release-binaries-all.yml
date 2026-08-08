@@ -42,7 +42,7 @@ jobs:
           cmake -S llvm -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
-            -DLLVM_ENABLE_PROJECTS=clang \
+            -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" \
             -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" \
             -DLLVM_ENABLE_ASSERTIONS=OFF \
             -DLLVM_ENABLE_TERMINFO=OFF \
@@ -50,7 +50,7 @@ jobs:
             -DLLVM_INCLUDE_EXAMPLES=OFF \
             -DLLVM_INCLUDE_TESTS=OFF \
             -DCLANG_INCLUDE_TESTS=OFF \
-            -DLLVM_DISTRIBUTION_COMPONENTS="clang;clang-resource-headers"
+            -DLLVM_DISTRIBUTION_COMPONENTS="clang;clang-resource-headers;clang-tidy"
 
       - name: Build and install Clang
         shell: bash
@@ -60,11 +60,19 @@ jobs:
         shell: bash
         run: |
           install/bin/clang --version
+          install/bin/clang-tidy --version
+
+          install/bin/clang-tidy \
+            --list-checks \
+            --checks='-*,clang-analyzer-optionality.OptionalityChecker' |
+            grep -F 'clang-analyzer-optionality.OptionalityChecker'
+
           cat > optional-smoke-test.c <<'EOF'
           int value_or_zero(_Optional int *value) {
             return value == nullptr ? 0 : *value;
           }
           EOF
+
           install/bin/clang -std=c2y -fsyntax-only optional-smoke-test.c
 
       - name: Package
