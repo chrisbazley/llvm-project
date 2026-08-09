@@ -460,7 +460,6 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
     // null or not-null.  Record the error node as an "implicit" null
     // dereference.
     if (ExplodedNode *N = C.generateSink(StNull, C.getPredecessor())) {
-      printf("\nimplicit null dereference\n");
       ImplicitNullDerefEvent event = {L, /*isLoad=*/true, N,
                                       &C.getBugReporter(),
                                       /*IsDirectDereference=*/true};

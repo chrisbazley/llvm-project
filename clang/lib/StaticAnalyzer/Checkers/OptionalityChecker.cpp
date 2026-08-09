@@ -38,10 +38,12 @@ namespace {
 class OptionalityChecker
     : public Checker<
           check::PreStmt<UnaryOperator>, check::PreStmt<BinaryOperator>,
-          check::PreStmt<ArraySubscriptExpr>, check::PreStmt<MemberExpr>> {
+          check::PreStmt<ArraySubscriptExpr>, check::PreStmt<MemberExpr>,
+          check::PreStmt<CallExpr>> {
 
   void verifyIncDec(CheckerContext &C, const Expr *E) const;
   void verifyAccess(CheckerContext &C, const Expr *E) const;
+  void verifyCall(CheckerContext &C, const Expr *E) const;
   void verifyCompare(CheckerContext &C, const Expr *L, const Expr *R) const;
   void verifyAdditive(CheckerContext &C, const Expr *L, const Expr *R) const;
   ExplodedNode *getNodeIfBug(CheckerContext &C, const Expr *E) const;
@@ -51,6 +53,7 @@ public:
   void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
   void checkPreStmt(const ArraySubscriptExpr *ASE, CheckerContext &C) const;
   void checkPreStmt(const MemberExpr *ME, CheckerContext &C) const;
+  void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
   CheckerNameRef CheckName;
   mutable std::unique_ptr<BugType> BT;
@@ -116,6 +119,37 @@ void OptionalityChecker::checkPreStmt(const MemberExpr *ME,
   verifyAccess(C, ME->getBase());
 }
 
+void OptionalityChecker::checkPreStmt(const CallExpr *CE,
+                                      CheckerContext &C) const {
+  // Preserve LValueToRValue. Its SVal is the actual function-pointer value.
+  // Ignore only parentheses, as CallAndMessageChecker does.
+  const Expr *Callee = CE->getCallee()->IgnoreParens();
+
+  // An explicit (*function)() has a non-optional FunctionToPointerDecay
+  // result here. Its UO_Deref is checked separately.
+  if (!pointeeIsOptional(Callee->getType()))
+    return;
+
+  ProgramStateRef State = C.getState();
+  SVal Val = State->getSVal(Callee, C.getLocationContext());
+
+  const auto Pointer = Val.getAs<DefinedOrUnknownSVal>();
+  if (!Pointer)
+    return;
+
+  if (State->isNonNull(*Pointer).isConstrainedTrue())
+    return;
+
+  ExplodedNode *N = C.generateErrorNode(State);
+  if (!N)
+    return;
+
+  BugReporter &BR = C.getBugReporter();
+  reportBug("Pointer to _Optional object is dereferenced without a preceding "
+            "check for null",
+            N, BR);
+}
+
 ExplodedNode *OptionalityChecker::getNodeIfBug(CheckerContext &C,
                                                const Expr *E) const {
   const Expr *SrcE = E->IgnoreParenImpCasts();
@@ -169,6 +203,17 @@ void OptionalityChecker::verifyAccess(CheckerContext &C, const Expr *E) const {
   // Do not suppress errors on defensive code paths, because dereferencing
   // a nullable pointer is always an error.
   reportBug("Pointer to _Optional object is dereferenced without a preceding "
+            "check for null",
+            N, BR);
+}
+
+void OptionalityChecker::verifyCall(CheckerContext &C, const Expr *E) const {
+  ExplodedNode *const N = getNodeIfBug(C, E);
+  if (!N)
+    return;
+
+  BugReporter &BR = C.getBugReporter();
+  reportBug("Pointer to _Optional function is called without a preceding "
             "check for null",
             N, BR);
 }
