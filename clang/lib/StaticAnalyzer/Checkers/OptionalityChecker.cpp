@@ -30,6 +30,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 
+#include <tuple>
+
 using namespace clang;
 using namespace ento;
 
@@ -90,6 +92,8 @@ void OptionalityChecker::checkPreStmt(const UnaryOperator *UO,
   case UO_PostDec:
     verifyIncDec(C, UO->getSubExpr());
     break;
+  default:
+    break;
   }
 }
 
@@ -133,14 +137,14 @@ void OptionalityChecker::checkPreStmt(const CallExpr *CE,
   ProgramStateRef State = C.getState();
   SVal Val = State->getSVal(Callee, C.getLocationContext());
 
-  const auto Pointer = Val.getAs<DefinedOrUnknownSVal>();
-  if (!Pointer)
+  auto DefOrUnknown = Val.getAs<DefinedOrUnknownSVal>();
+  if (!DefOrUnknown)
     return;
 
-  if (State->isNonNull(*Pointer).isConstrainedTrue())
+  if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
     return;
 
-  ExplodedNode *N = C.generateErrorNode(State);
+  ExplodedNode *N = C.generateNonFatalErrorNode(State);
   if (!N)
     return;
 
@@ -160,25 +164,35 @@ ExplodedNode *OptionalityChecker::getNodeIfBug(CheckerContext &C,
   ProgramStateRef State = C.getState();
   SVal Val = State->getSVal(SrcE, C.getLocationContext());
 
-  if (SymbolRef Sym = Val.getAsSymbol()) {
-    SVal SymVal = C.getSValBuilder().makeSymbolVal(Sym);
-
-    if (State->isNonNull(SymVal).isConstrainedTrue())
+  // A generalised lvalue is a reference to an object or function
+  if (SrcE->isGLValue()) {
+    // Convert lvalue to value if necessary (e.g. for unary ++)
+    const auto Location = Val.getAs<Loc>();
+    if (!Location)
       return nullptr;
-  }
 
-  // Convert lvalue to value if necessary (e.g. for unary ++)
-  if (auto Location = Val.getAs<Loc>())
     Val = State->getSVal(*Location);
+  }
 
   auto DefOrUnknown = Val.getAs<DefinedOrUnknownSVal>();
   if (!DefOrUnknown)
     return nullptr;
 
-  if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
+  ProgramStateRef NonNullState, NullState;
+  std::tie(NonNullState, NullState) = State->assume(*DefOrUnknown);
+
+  if (!NullState)
     return nullptr;
 
-  return C.generateErrorNode(State);
+  // UnknownVal cannot be split. A nonfatal error
+  // permits exploration to continue.
+  if (NonNullState == NullState)
+    return C.generateNonFatalErrorNode(State);
+
+  if (NonNullState)
+    C.addTransition(NonNullState);
+
+  return C.generateNonFatalErrorNode(NullState);
 }
 
 void OptionalityChecker::verifyIncDec(CheckerContext &C, const Expr *E) const {
