@@ -1,0 +1,151 @@
+name: Validate _Optional Clang
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 3 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clang-tests:
+    name: _Optional and full Clang regression tests
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure test build
+        shell: bash
+        run: |
+          cmake -S llvm -B build-test -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" \
+            -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" \
+            -DLLVM_INCLUDE_TESTS=ON \
+            -DCLANG_INCLUDE_TESTS=ON \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_ENABLE_TERMINFO=OFF
+
+      - name: Build Clang and test tools
+        shell: bash
+        run: cmake --build build-test --target clang clang-tidy llvm-lit --parallel 2
+
+      - name: Focused _Optional regression tests
+        shell: bash
+        run: |
+          set -o pipefail
+          build-test/bin/llvm-lit -sv \
+            clang/test/Sema/optional-qualifier.c \
+            clang/test/Analysis/optionality.c \
+            2>&1 | tee optional-tests.log
+
+      - name: Full Clang regression suite
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build build-test --target check-clang --parallel 2 \
+            2>&1 | tee check-clang.log
+
+      - name: Clang tools regression suite
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build build-test --target check-clang-tools --parallel 2 \
+            2>&1 | tee check-clang-tools.log
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: clang-validation-logs-${{ github.sha }}
+          path: |
+            optional-tests.log
+            check-clang.log
+            check-clang-tools.log
+          if-no-files-found: ignore
+
+      - name: Write validation summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## _Optional Clang validation"
+            echo
+            echo "This run checks the dedicated _Optional Sema and Static Analyzer tests,"
+            echo "then the complete Clang and Clang tools regression suites."
+            echo
+            echo "Commit: \`$GITHUB_SHA\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  weekly-check-all:
+    name: Weekly complete LLVM and Clang test suite
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure test build
+        shell: bash
+        run: |
+          cmake -S llvm -B build-test -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" \
+            -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" \
+            -DLLVM_INCLUDE_TESTS=ON \
+            -DCLANG_INCLUDE_TESTS=ON \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_ENABLE_TERMINFO=OFF
+
+      - name: Run complete LLVM and Clang test suite
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build build-test --target check-all --parallel 2 \
+            2>&1 | tee check-all.log
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: check-all-log-${{ github.sha }}
+          path: check-all.log
+          if-no-files-found: ignore
+
+      - name: Write validation summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Weekly LLVM validation"
+            echo
+            echo "The complete LLVM and enabled-project test suite was run."
+            echo
+            echo "Commit: \`$GITHUB_SHA\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+
