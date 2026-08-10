@@ -365,7 +365,7 @@ private:
 
   // type-qualifiers
   LLVM_PREFERRED_TYPE(TQ)
-  unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
+  unsigned TypeQualifiers : 6;  // Bitwise OR of TQ.
 
   // overflow behavior qualifiers
   LLVM_PREFERRED_TYPE(OverflowBehaviorState)
