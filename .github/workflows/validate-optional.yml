@@ -46,7 +46,7 @@ jobs:
 
       - name: Build Clang and test tools
         shell: bash
-        run: cmake --build build-test --target clang clang-tidy llvm-lit --parallel 2
+        run: cmake --build build-test --target clang clang-tidy --parallel 2
 
       - name: Focused _Optional regression tests
         shell: bash
