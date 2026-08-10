@@ -7,7 +7,7 @@
 int gold(_Optional typeof(int(float)) function)
 {
   return function(3.14f);
-  // expected-warning@-1 {{Pointer to _Optional object is dereferenced without a preceding check for null}}
+  // expected-warning@-1 {{Pointer to _Optional function is dereferenced without a preceding check for null}}
 }
 
 int gold_checked(_Optional typeof(int(float)) function)
@@ -20,7 +20,7 @@ int gold_checked(_Optional typeof(int(float)) function)
 void anna(_Optional typeof(void(void)) *function)
 {
   function();
-  // expected-warning@-1 {{Pointer to _Optional object is dereferenced without a preceding check for null}}
+  // expected-warning@-1 {{Pointer to _Optional function is dereferenced without a preceding check for null}}
 }
 
 void anna_explicit(_Optional typeof(void(void)) *function)

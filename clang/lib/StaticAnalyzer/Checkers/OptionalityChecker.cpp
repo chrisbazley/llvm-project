@@ -125,33 +125,7 @@ void OptionalityChecker::checkPreStmt(const MemberExpr *ME,
 
 void OptionalityChecker::checkPreStmt(const CallExpr *CE,
                                       CheckerContext &C) const {
-  // Preserve LValueToRValue. Its SVal is the actual function-pointer value.
-  // Ignore only parentheses, as CallAndMessageChecker does.
-  const Expr *Callee = CE->getCallee()->IgnoreParens();
-
-  // An explicit (*function)() has a non-optional FunctionToPointerDecay
-  // result here. Its UO_Deref is checked separately.
-  if (!pointeeIsOptional(Callee->getType()))
-    return;
-
-  ProgramStateRef State = C.getState();
-  SVal Val = State->getSVal(Callee, C.getLocationContext());
-
-  auto DefOrUnknown = Val.getAs<DefinedOrUnknownSVal>();
-  if (!DefOrUnknown)
-    return;
-
-  if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
-    return;
-
-  ExplodedNode *N = C.generateNonFatalErrorNode(State);
-  if (!N)
-    return;
-
-  BugReporter &BR = C.getBugReporter();
-  reportBug("Pointer to _Optional object is dereferenced without a preceding "
-            "check for null",
-            N, BR);
+  verifyCall(C, CE->getCallee());
 }
 
 ExplodedNode *OptionalityChecker::getNodeIfBug(CheckerContext &C,
@@ -221,15 +195,34 @@ void OptionalityChecker::verifyAccess(CheckerContext &C, const Expr *E) const {
             N, BR);
 }
 
-void OptionalityChecker::verifyCall(CheckerContext &C, const Expr *E) const {
-  ExplodedNode *const N = getNodeIfBug(C, E);
+void OptionalityChecker::verifyCall(CheckerContext &C,
+                                    const Expr *E) const {
+  // Preserve LValueToRValue. Its SVal is the actual function-pointer value.
+  // Ignore only parentheses, as CallAndMessageChecker does.
+  const Expr *Callee = E->IgnoreParens();
+
+  // An explicit (*function)() has a non-optional FunctionToPointerDecay
+  // result here. Its UO_Deref is checked separately.
+  if (!pointeeIsOptional(Callee->getType()))
+    return;
+
+  ProgramStateRef State = C.getState();
+  SVal Val = State->getSVal(Callee, C.getLocationContext());
+
+  auto DefOrUnknown = Val.getAs<DefinedOrUnknownSVal>();
+  if (!DefOrUnknown)
+    return;
+
+  if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
+    return;
+
+  ExplodedNode *N = C.generateNonFatalErrorNode(State);
   if (!N)
     return;
 
-  BugReporter &BR = C.getBugReporter();
-  reportBug("Pointer to _Optional function is called without a preceding "
+  reportBug("Pointer to _Optional function is dereferenced without a preceding "
             "check for null",
-            N, BR);
+            N, C.getBugReporter());
 }
 
 void OptionalityChecker::verifyCompare(CheckerContext &C, const Expr *L,
