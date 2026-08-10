@@ -44,9 +44,12 @@ jobs:
             -DLLVM_INCLUDE_EXAMPLES=OFF \
             -DLLVM_ENABLE_TERMINFO=OFF
 
-      - name: Build Clang and test tools
+      - name: Build Clang test dependencies
         shell: bash
-        run: cmake --build build-test --target clang clang-tidy --parallel 2
+        run: |
+          cmake --build build-test \
+            --target clang-test-depends \
+            --parallel 2
 
       - name: Focused _Optional regression tests
         shell: bash
@@ -147,5 +150,3 @@ jobs:
             echo
             echo "Commit: \`$GITHUB_SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"
-
-
