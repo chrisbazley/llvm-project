@@ -33,8 +33,7 @@ namespace {
 
 class CallAndMessageChecker
     : public Checker<check::PreObjCMessage, check::ObjCMessageNil,
-                     check::PreCall,
-                     EventDispatcher<ImplicitNullDerefEvent>> {
+                     check::PreCall> {
   const BugType CallNullBug{
       this, "Called function pointer is null (null dereference)"};
   const BugType CallUndefBug{
@@ -446,25 +445,13 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
   ProgramStateRef StNonNull, StNull;
   std::tie(StNonNull, StNull) = State->assume(L.castAs<DefinedOrUnknownSVal>());
 
-  if (StNull) {
-    if (!StNonNull) {
-      if (!ChecksEnabled[CK_FunctionPointer]) {
-        C.addSink(StNull);
-        return nullptr;
-      }
-      emitBadCall(CallNullBug, C, Callee);
+  if (StNull && !StNonNull) {
+    if (!ChecksEnabled[CK_FunctionPointer]) {
+      C.addSink(StNull);
       return nullptr;
     }
-
-    // Otherwise, we have the case where the location could either be
-    // null or not-null.  Record the error node as an "implicit" null
-    // dereference.
-    if (ExplodedNode *N = C.generateSink(StNull, C.getPredecessor())) {
-      ImplicitNullDerefEvent event = {L, /*isLoad=*/true, N,
-                                      &C.getBugReporter(),
-                                      /*IsDirectDereference=*/true};
-      dispatchEvent(event);
-    }
+    emitBadCall(CallNullBug, C, Callee);
+    return nullptr;
   }
 
   return StNonNull;
