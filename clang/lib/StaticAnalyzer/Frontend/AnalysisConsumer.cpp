@@ -428,6 +428,23 @@ void AnalysisConsumer::storeTopLevelDecls(DeclGroupRef DG) {
   }
 }
 
+static bool hasNullableParameter(const FunctionDecl *FD) {
+  return llvm::any_of(FD->parameters(), [](const ParmVarDecl *P) {
+    QualType T = P->getType();
+
+    // _Optional T *
+    if (const auto *PT = T->getAs<PointerType>())
+      if (PT->getPointeeType().isOptionalQualified())
+        return true;
+
+    // T * _Nullable
+    if (std::optional<NullabilityKind> NK = T->getNullability())
+      return *NK == NullabilityKind::Nullable;
+
+    return false;
+  });
+}
+
 static bool shouldSkipFunction(const Decl *D,
                                const SetOfConstDecls &Visited,
                                const SetOfConstDecls &VisitedAsTopLevel) {
@@ -451,10 +468,10 @@ static bool shouldSkipFunction(const Decl *D,
   if (isa<ObjCMethodDecl>(D))
     return false;
 
-  // If a function with a _Nullable parameter has at least one caller, the
-  // checker behaves as though no other parameter value is possible. This is
-  // because the static analyzer doesn't re-analyse functions as top level.
-  return false;
+  // Analyze nullable contracts independently of observed call arguments.
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
+    if (hasNullableParameter(FD))
+      return false;
 
   // We also want to reanalyze all C++ copy and move assignment operators to
   // separately check the two cases where 'this' aliases with the parameter and
