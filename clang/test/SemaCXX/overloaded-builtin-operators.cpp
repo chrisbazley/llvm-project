@@ -238,7 +238,7 @@ namespace PR8477 {
     // FIXME: It would be nice to report fewer candidates here.
     (void)(foo - foo); // expected-error{{use of overloaded operator '-' is ambiguous}} \
     // expected-note 4{{built-in candidate operator-}} \
-    // expected-note{{142 candidates omitted}}
+    // expected-note{{144 candidates omitted}}
     return foo[zero] == zero;
   }
 }

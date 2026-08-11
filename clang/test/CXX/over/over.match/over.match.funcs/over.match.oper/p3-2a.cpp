@@ -212,6 +212,7 @@ struct ImplicitInt {
   bool operator==(const ImplicitInt&) const; // expected-note {{candidate function (with reversed parameter order)}}
   operator int*() const;
 };
+// expected-note@+1 4 {{built-in candidate operator!=}}
 bool implicit_int = nullptr != ImplicitInt{}; // expected-error {{use of overloaded operator '!=' is ambiguous (with operand types 'std::nullptr_t' and 'ImplicitInt')}}
                                               // expected-note@-1 4 {{built-in candidate operator!=}}
 

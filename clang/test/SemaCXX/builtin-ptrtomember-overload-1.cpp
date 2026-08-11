@@ -40,6 +40,7 @@ void foo1(C1 c1, int A::* pmf) {
 }
 
 void foo1(C1 c1, int E::* pmf) {
+// expected-note@+1 2 {{built-in candidate operator->*}}
         int i = c1->*pmf;	// expected-error {{use of overloaded operator '->*' is ambiguous}} \
                                 // expected-note {{because of ambiguity in conversion of 'C1' to 'E *'}} \
                                 // expected-note 2 {{built-in candidate operator}}
