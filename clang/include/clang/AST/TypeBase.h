@@ -370,8 +370,8 @@ public:
 
   enum : uint64_t {
     /// The maximum supported address space number.
-    /// 23 bits should be enough for anyone.
-    MaxAddressSpace = 0x7fffffu,
+    /// The fourth fast qualifier leaves 22 bits below PtrAuthShift.
+    MaxAddressSpace = 0x3fffffu,
 
     /// The width of the "fast" qualifier mask.
     FastWidth = 4,
@@ -833,6 +833,9 @@ private:
   static constexpr uint64_t AddressSpaceMask =
       ~(CVRMask | UMask | GCAttrMask | LifetimeMask | PtrAuthMask);
   static constexpr uint64_t AddressSpaceShift = 10;
+  static_assert(
+      ((uint64_t(MaxAddressSpace) << AddressSpaceShift) & PtrAuthMask) == 0,
+      "address-space and pointer-auth qualifier bits overlap");
 };
 
 class QualifiersAndAtomic {
