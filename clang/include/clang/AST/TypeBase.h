@@ -824,12 +824,12 @@ private:
   static constexpr uint64_t PtrAuthShift = 32;
   static constexpr uint64_t PtrAuthMask = UINT64_C(0xffffffff) << PtrAuthShift;
 
-  static const uint32_t UMask = 0x10;
-  static const uint32_t UShift = 4;
-  static const uint32_t GCAttrMask = 0x60;
-  static const uint32_t GCAttrShift = 5;
-  static const uint32_t LifetimeMask = 0x380;
-  static const uint32_t LifetimeShift = 7;
+  static constexpr uint64_t UMask = 0x10;
+  static constexpr uint64_t UShift = 4;
+  static constexpr uint64_t GCAttrMask = 0x60;
+  static constexpr uint64_t GCAttrShift = 5;
+  static constexpr uint64_t LifetimeMask = 0x380;
+  static constexpr uint64_t LifetimeShift = 7;
   static constexpr uint64_t AddressSpaceMask =
       ~(CVRMask | UMask | GCAttrMask | LifetimeMask | PtrAuthMask);
   static constexpr uint64_t AddressSpaceShift = 10;
