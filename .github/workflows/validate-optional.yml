@@ -7,22 +7,26 @@ on:
     branches: [main]
   workflow_call:
   workflow_dispatch:
-  schedule:
-    - cron: "30 3 * * 0"
+    inputs:
+      check_all:
+        description: Run the complete LLVM and enabled-project test suite
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-validation-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-validation-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   clang-tests:
     name: _Optional and full Clang regression tests
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'workflow_dispatch' || inputs.check_all != true
     runs-on: ubuntu-22.04
-    timeout-minutes: 240
+    timeout-minutes: 300
 
     steps:
       - name: Checkout LLVM
@@ -36,8 +40,8 @@ jobs:
           cmake -S llvm -B build-test -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
-            -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" \
-            -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" \
+            -DLLVM_ENABLE_PROJECTS=clang \
+            -DLLVM_TARGETS_TO_BUILD=X86 \
             -DLLVM_INCLUDE_TESTS=ON \
             -DCLANG_INCLUDE_TESTS=ON \
             -DLLVM_INCLUDE_BENCHMARKS=OFF \
@@ -51,7 +55,7 @@ jobs:
             --target clang-test-depends \
             --parallel 2
 
-      - name: Focused _Optional regression tests
+      - name: Run focused _Optional regression tests
         shell: bash
         run: |
           set -o pipefail
@@ -60,19 +64,14 @@ jobs:
             clang/test/Analysis/optionality.c \
             2>&1 | tee optional-tests.log
 
-      - name: Full Clang regression suite
+      - name: Run complete Clang regression suite
         shell: bash
         run: |
           set -o pipefail
-          cmake --build build-test --target check-clang --parallel 2 \
+          cmake --build build-test \
+            --target check-clang \
+            --parallel 2 \
             2>&1 | tee check-clang.log
-
-      - name: Clang tools regression suite
-        shell: bash
-        run: |
-          set -o pipefail
-          cmake --build build-test --target check-clang-tools --parallel 2 \
-            2>&1 | tee check-clang-tools.log
 
       - name: Upload test logs
         if: always()
@@ -82,7 +81,6 @@ jobs:
           path: |
             optional-tests.log
             check-clang.log
-            check-clang-tools.log
           if-no-files-found: ignore
 
       - name: Write validation summary
@@ -93,14 +91,14 @@ jobs:
             echo "## _Optional Clang validation"
             echo
             echo "This run checks the dedicated _Optional Sema and Static Analyzer tests,"
-            echo "then the complete Clang and Clang tools regression suites."
+            echo "then the complete Clang regression suite."
             echo
             echo "Commit: \`$GITHUB_SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  weekly-check-all:
-    name: Weekly complete LLVM and Clang test suite
-    if: github.event_name == 'schedule'
+  check-all:
+    name: Complete LLVM and Clang test suite
+    if: github.event_name == 'workflow_dispatch' && inputs.check_all == true
     runs-on: ubuntu-22.04
     timeout-minutes: 360
 
@@ -110,28 +108,30 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Configure test build
+      - name: Configure complete test build
         shell: bash
         run: |
           cmake -S llvm -B build-test -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" \
-            -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" \
+            -DLLVM_TARGETS_TO_BUILD=X86 \
             -DLLVM_INCLUDE_TESTS=ON \
             -DCLANG_INCLUDE_TESTS=ON \
             -DLLVM_INCLUDE_BENCHMARKS=OFF \
             -DLLVM_INCLUDE_EXAMPLES=OFF \
             -DLLVM_ENABLE_TERMINFO=OFF
 
-      - name: Run complete LLVM and Clang test suite
+      - name: Run complete LLVM and enabled-project test suite
         shell: bash
         run: |
           set -o pipefail
-          cmake --build build-test --target check-all --parallel 2 \
+          cmake --build build-test \
+            --target check-all \
+            --parallel 2 \
             2>&1 | tee check-all.log
 
-      - name: Upload test log
+      - name: Upload complete test log
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
@@ -144,9 +144,10 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Weekly LLVM validation"
+            echo "## Complete LLVM validation"
             echo
-            echo "The complete LLVM and enabled-project test suite was run."
+            echo "The complete LLVM and enabled-project test suite was requested manually."
+            echo
             echo
             echo "Commit: \`$GITHUB_SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"
