@@ -15012,16 +15012,18 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
 
   QualType Ty = op->getType();
 
-  // If the type is an array type, move the qualifiers up to the
-  // top level, so they can be modified.
-  if (Ty->isArrayType()) {
-    Qualifiers Quals;
-    Ty = Context.getUnqualifiedArrayType(Ty, Quals);
-    if (Quals)
-      Ty = Context.getQualifiedType(Ty, Quals);
-  }
+  if (Ty.isOptionalQualified()) {
+    // If the type is an array type, move the qualifiers up to the
+    // top level so that _Optional can be removed.
+    if (Ty->isArrayType()) {
+      Qualifiers Quals;
+      Ty = Context.getUnqualifiedArrayType(Ty, Quals);
+      if (Quals)
+        Ty = Context.getQualifiedType(Ty, Quals);
+    }
 
-  Ty = Context.getNonOptionalType(Ty);
+    Ty = Context.getNonOptionalType(Ty);
+  }
 
   if (lval == Expr::LV_ClassTemporary || lval == Expr::LV_ArrayTemporary) {
     bool IsError = isSFINAEContext();
