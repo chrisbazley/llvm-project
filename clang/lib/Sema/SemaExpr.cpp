@@ -11718,7 +11718,8 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
   }
 
   QualType resultType = PExp->getType();
-  if (resultType->isPointerType()) {
+  if (resultType->isPointerType() &&
+      resultType->getPointeeType().isOptionalQualified()) {
     // The result of pointer arithmetic is not a null pointer (by definition).
     auto PointeeType = resultType->getPointeeType();
     resultType = Context.getPointerType(Context.getNonOptionalType(PointeeType));
@@ -11823,7 +11824,8 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
       if (CompLHSTy) *CompLHSTy = LHS.get()->getType();
 
       QualType resultType = LHS.get()->getType();
-      if (resultType->isPointerType()) {
+      if (resultType->isPointerType() &&
+          resultType->getPointeeType().isOptionalQualified()) {
         // The result of pointer arithmetic is not a null pointer (by definition).
         auto PointeeType = resultType->getPointeeType();
         resultType = Context.getPointerType(Context.getNonOptionalType(PointeeType));
