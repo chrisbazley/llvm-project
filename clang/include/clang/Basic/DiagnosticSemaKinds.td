@@ -6698,6 +6698,9 @@ def err_typecheck_invalid_optional_param : Error<
   "function parameter cannot have '_Optional' qualified type %0">;
 def err_typecheck_invalid_optional_member : Error<
   "member cannot have '_Optional' qualified type %0">;
+def warn_null_to_nonoptional : Warning<
+  "null pointer constant converted to a pointer type without '_Optional'">,
+  InGroup<DiagGroup<"null-to-nonoptional">>, DefaultIgnore;
 def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<

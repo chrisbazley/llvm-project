@@ -8406,6 +8406,10 @@ static bool checkConditionalNullPointer(Sema &S, ExprResult &NullExpr,
                                             Expr::NPC_ValueDependentIsNull))
     return true;
 
+  if (const auto *PT = PointerTy->getAs<PointerType>();
+      PT && !PT->getPointeeType().isOptionalQualified())
+    S.Diag(NullExpr.get()->getExprLoc(), diag::warn_null_to_nonoptional);
+
   NullExpr = S.ImpCastExprToType(NullExpr.get(), PointerTy, CK_NullToPointer);
   return false;
 }
@@ -10236,6 +10240,12 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       ((getLangOpts().C23 && RHS.get()->getType()->isNullPtrType()) ||
        RHS.get()->isNullPointerConstant(Context,
                                         Expr::NPC_ValueDependentIsNull))) {
+    if (Diagnose) {
+      if (const auto *PT = LHSTypeAfterConversion->getAs<PointerType>();
+          PT && !PT->getPointeeType().isOptionalQualified())
+        Diag(RHS.get()->getExprLoc(), diag::warn_null_to_nonoptional);
+    }
+
     AssignConvertType Ret = AssignConvertType::Compatible;
     if (Diagnose || ConvertRHS) {
       CastKind Kind;
