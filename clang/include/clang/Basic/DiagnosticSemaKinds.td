@@ -6700,7 +6700,10 @@ def err_typecheck_invalid_optional_member : Error<
   "member cannot have '_Optional' qualified type %0">;
 def warn_null_to_nonoptional : Warning<
   "null pointer constant converted to a pointer type without '_Optional'">,
-  InGroup<DiagGroup<"null-to-nonoptional">>, DefaultIgnore;
+  InGroup<NullToNonoptional>, DefaultIgnore;
+def warn_implicit_null_to_nonoptional : Warning<
+  "pointer type %0 without '_Optional' implicitly initialized to null">,
+  InGroup<NullToNonoptional>, DefaultIgnore;
 def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<

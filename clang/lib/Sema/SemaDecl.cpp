@@ -14730,6 +14730,9 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       return;
     }
 
+    if (Var->hasGlobalStorage())
+      DiagnoseImplicitNullInitialization(Type, Var->getLocation());
+
     // In C, if the definition is const-qualified and has no initializer, it
     // is left uninitialized unless it has static or thread storage duration.
     if (!getLangOpts().CPlusPlus && Type.isConstQualified()) {

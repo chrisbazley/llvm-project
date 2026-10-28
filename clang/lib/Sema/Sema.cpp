@@ -1489,6 +1489,8 @@ void Sema::ActOnEndOfTranslationUnit() {
 
     // No initialization is performed for a tentative definition.
     CheckCompleteVariableDeclaration(VD);
+    if (!VD->isInvalidDecl())
+      DiagnoseImplicitNullInitialization(VD->getType(), VD->getLocation());
 
     // In C, if the definition is const-qualified and has no initializer, it
     // is left uninitialized unless it has static or thread storage duration.
