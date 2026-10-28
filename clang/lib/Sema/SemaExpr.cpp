@@ -8406,10 +8406,6 @@ static bool checkConditionalNullPointer(Sema &S, ExprResult &NullExpr,
                                             Expr::NPC_ValueDependentIsNull))
     return true;
 
-  if (const auto *PT = PointerTy->getAs<PointerType>();
-      PT && !PT->getPointeeType().isOptionalQualified())
-    S.Diag(NullExpr.get()->getExprLoc(), diag::warn_null_to_nonoptional);
-
   NullExpr = S.ImpCastExprToType(NullExpr.get(), PointerTy, CK_NullToPointer);
   return false;
 }
@@ -10130,6 +10126,29 @@ Sema::CheckTransparentUnionArgumentConstraints(QualType ArgType,
   return AssignConvertType::Compatible;
 }
 
+// Conditional operands undergo pointer conversions before the destination is
+// known. Diagnose their null arms here instead, without changing the ordinary
+// result type of the conditional expression or looking through explicit casts.
+static void diagnoseNullToNonoptional(Sema &S, const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  if ((S.getLangOpts().C23 && E->getType()->isNullPtrType()) ||
+      E->isNullPointerConstant(S.Context, Expr::NPC_ValueDependentIsNull)) {
+    S.Diag(E->getExprLoc(), diag::warn_null_to_nonoptional);
+    return;
+  }
+  if (!E->getType()->isPointerType())
+    return;
+
+  if (const auto *Conditional = dyn_cast<AbstractConditionalOperator>(E)) {
+    diagnoseNullToNonoptional(S, Conditional->getTrueExpr());
+    diagnoseNullToNonoptional(S, Conditional->getFalseExpr());
+    return;
+  }
+  if (const auto *Binary = dyn_cast<BinaryOperator>(E);
+      Binary && Binary->getOpcode() == BO_Comma)
+    diagnoseNullToNonoptional(S, Binary->getRHS());
+}
+
 AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
                                                          ExprResult &CallerRHS,
                                                          bool Diagnose,
@@ -10232,6 +10251,13 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
   // unqualified type of the LHS.
   QualType LHSTypeAfterConversion = LHSType.getAtomicUnqualifiedType();
 
+  if (Diagnose &&
+      !Diags.isIgnored(diag::warn_null_to_nonoptional, RHS.get()->getExprLoc())) {
+    if (const auto *PT = LHSTypeAfterConversion->getAs<PointerType>();
+        PT && !PT->getPointeeType().isOptionalQualified())
+      diagnoseNullToNonoptional(*this, RHS.get());
+  }
+
   // C99 6.5.16.1p1: the left operand is a pointer and the right is
   // a null pointer constant <C23>or its type is nullptr_t;</C23>.
   if ((LHSTypeAfterConversion->isPointerType() ||
@@ -10240,12 +10266,6 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       ((getLangOpts().C23 && RHS.get()->getType()->isNullPtrType()) ||
        RHS.get()->isNullPointerConstant(Context,
                                         Expr::NPC_ValueDependentIsNull))) {
-    if (Diagnose) {
-      if (const auto *PT = LHSTypeAfterConversion->getAs<PointerType>();
-          PT && !PT->getPointeeType().isOptionalQualified())
-        Diag(RHS.get()->getExprLoc(), diag::warn_null_to_nonoptional);
-    }
-
     AssignConvertType Ret = AssignConvertType::Compatible;
     if (Diagnose || ConvertRHS) {
       CastKind Kind;

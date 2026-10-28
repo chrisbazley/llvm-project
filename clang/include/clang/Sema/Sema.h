@@ -12906,6 +12906,8 @@ public:
                  bool DependentDeduction = false,
                  bool IgnoreConstraints = false,
                  TemplateSpecCandidateSet *FailedTSC = nullptr);
+  void DiagnoseImplicitNullInitialization(QualType Type, SourceLocation Loc);
+
   void DiagnoseAutoDeductionFailure(const VarDecl *VDecl, const Expr *Init);
   bool DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
                         bool Diagnose = true);

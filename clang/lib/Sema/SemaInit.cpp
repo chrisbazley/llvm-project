@@ -613,6 +613,44 @@ public:
 
 } // end anonymous namespace
 
+// Diagnose one representative element for an implicitly initialized array,
+// rather than emitting a warning for every element in a potentially large array.
+void Sema::DiagnoseImplicitNullInitialization(QualType Type, SourceLocation Loc) {
+  Type = Type.getAtomicUnqualifiedType();
+  if (getLangOpts().CPlusPlus ||
+      Diags.isIgnored(diag::warn_implicit_null_to_nonoptional, Loc))
+    return;
+  if (const auto *PT = Type->getAs<PointerType>()) {
+    if (!PT->getPointeeType().isOptionalQualified())
+      Diag(Loc, diag::warn_implicit_null_to_nonoptional) << Type;
+  } else if (const auto *AT = Context.getAsArrayType(Type)) {
+    if (isa<IncompleteArrayType>(AT))
+      return;
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+        CAT && CAT->getZExtSize() == 0)
+      return;
+    DiagnoseImplicitNullInitialization(AT->getElementType(), Loc);
+  } else if (const auto *RT = Type->getAs<RecordType>()) {
+    if (RT->getDecl()->isUnion())
+      return;
+    for (const FieldDecl *Field : RT->getDecl()->fields()) {
+      if (Field->isUnnamedBitField() ||
+          Field->getType()->isIncompleteArrayType())
+        continue;
+      DiagnoseImplicitNullInitialization(Field->getType(), Loc);
+    }
+  }
+}
+
+static void diagnoseImplicitNullInitialization(
+    Sema &S, const InitializedEntity &Entity, QualType Type, SourceLocation Loc) {
+  for (const InitializedEntity *Parent = &Entity; Parent;
+       Parent = Parent->getParent())
+    if (Parent->getType()->isUnionType())
+      return;
+  S.DiagnoseImplicitNullInitialization(Type, Loc);
+}
+
 ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
                                              const InitializedEntity &Entity) {
   InitializationKind Kind = InitializationKind::CreateValue(Loc, Loc, Loc,
@@ -1753,6 +1791,8 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
                                       unsigned &StructuredIndex) {
   if (Index >= IList->getNumInits()) {
     if (!VerifyOnly) {
+      diagnoseImplicitNullInitialization(SemaRef, Entity, DeclType,
+                                         IList->getBeginLoc());
       if (SemaRef.getLangOpts().CPlusPlus) {
         if (DeclType->isSizelessBuiltinType())
           SemaRef.Diag(IList->getBeginLoc(),
@@ -2203,6 +2243,9 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
                      diag::err_variable_object_no_init)
             << VAT->getSizeExpr()->getSourceRange();
     }
+    if (!VerifyOnly && !HasErr)
+      diagnoseImplicitNullInitialization(SemaRef, Entity, DeclType,
+                                         IList->getBeginLoc());
     hadError = HasErr;
     ++Index;
     ++StructuredIndex;
@@ -8485,6 +8528,10 @@ ExprResult InitializationSequence::Perform(Sema &S,
     }
 
     case SK_ZeroInitialization: {
+      diagnoseImplicitNullInitialization(S, Entity, Step->Type,
+                                         Kind.getLocation());
+
+
       step_iterator NextStep = Step;
       ++NextStep;
       if (NextStep != StepEnd &&
