@@ -7,9 +7,9 @@ int value;
 void callback(void);
 typedef void Callback(void);
 typedef int *Pointer;
-struct Required { int n; int *p; };
+struct Required { int n; int *p; }; // warn-note 9 {{'p' declared here}}
 struct Optional { int n; _Optional int *p; };
-struct Nested { struct Required s; int *a[3]; };
+struct Nested { struct Required s; int *a[3]; }; // warn-note 4 {{'a' declared here}}
 union Choice { int *p; int n; };
 struct WithUnion { union Choice u; int n; };
 struct Flexible { int n; int *a[]; };

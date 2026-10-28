@@ -10,23 +10,23 @@
 void accept(int *);
 void accept_optional(_Optional int *);
 
-int *global = nullptr; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+int *global = nullptr; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
 _Optional int *optional_global = nullptr;
-int **nested = nullptr; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+int **nested = nullptr; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
 
 void assignments(int condition) {
   int *p;
   _Optional int *optional;
 
-  p = 0; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  p = NULL; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  p = 0; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  p = NULL; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
   optional = 0;
   optional = nullptr;
 
-  accept(nullptr); // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  accept(nullptr); // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
   accept_optional(nullptr);
 
-  p = condition ? p : nullptr; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  p = condition ? p : nullptr; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
   optional = condition ? optional : nullptr;
 
   (void)(int *)nullptr;
@@ -35,7 +35,7 @@ void assignments(int condition) {
 }
 
 int *return_null(void) {
-  return nullptr; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  return nullptr; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
 }
 
 _Optional int *return_optional_null(void) {
