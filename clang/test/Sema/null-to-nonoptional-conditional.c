@@ -37,22 +37,22 @@ _Optional int *optional_destinations(int condition, int other, int *p, int *q) {
 
 // The same null arms must still warn when converted to a non-optional target.
 int *required_destinations(int condition, int other, int *p, int *q) {
-  int *initial = condition ? p : nullptr; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  initial = condition ? NULL : p; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  initial = condition ? p : 0; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  initial = condition ? p : (other ? q : nullptr); // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  initial = condition ? (other ? nullptr : p) : q; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  initial = (side_effect(), condition ? p : nullptr); // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  initial = p ?: nullptr; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  accept(condition ? p : NULL); // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  accept(_Generic(condition, int: condition ? p : nullptr)); // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  int *initial = condition ? p : nullptr; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  initial = condition ? NULL : p; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  initial = condition ? p : 0; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  initial = condition ? p : (other ? q : nullptr); // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  initial = condition ? (other ? nullptr : p) : q; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  initial = (side_effect(), condition ? p : nullptr); // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  initial = p ?: nullptr; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  accept(condition ? p : NULL); // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  accept(_Generic(condition, int: condition ? p : nullptr)); // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
   accept(_Generic(condition, int: p, default: condition ? p : nullptr));
   accept(__builtin_choose_expr(1, p, condition ? p : nullptr));
-  struct Fields fields = {.required = condition ? p : nullptr}; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  initial = condition ? (other ? p : nullptr) : (other ? q : nullptr); // warn-warning 2 {{null pointer constant converted to a pointer type without '_Optional'}}
+  struct Fields fields = {.required = condition ? p : nullptr}; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  initial = condition ? (other ? p : nullptr) : (other ? q : nullptr); // warn-warning 2 {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
   (void)fields;
   (void)initial;
-  return condition ? nullptr : p; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  return condition ? nullptr : p; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
 }
 
 _Optional Callback *optional_callbacks(int condition, Callback *p) {
@@ -64,11 +64,11 @@ _Optional Callback *optional_callbacks(int condition, Callback *p) {
 }
 
 Callback *required_callbacks(int condition, Callback *p) {
-  Callback *initial = condition ? callback : nullptr; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  initial = condition ? nullptr : p; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
-  accept_callback(condition ? p : NULL); // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  Callback *initial = condition ? callback : nullptr; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  initial = condition ? nullptr : p; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
+  accept_callback(condition ? p : NULL); // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
   (void)initial;
-  return condition ? p : nullptr; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  return condition ? p : nullptr; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
 }
 
 // Respect explicit pointer casts around a null value, an arm or the whole
@@ -77,7 +77,7 @@ void explicit_casts(int condition, int other, int *p) {
   int *initial = condition ? p : (int *)nullptr;
   initial = (int *)(condition ? p : nullptr);
   initial = condition ? (int *)(other ? p : nullptr) : p;
-  initial = condition ? (int *)nullptr : (other ? p : nullptr); // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  initial = condition ? (int *)nullptr : (other ? p : nullptr); // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
   accept((int *)(condition ? p : NULL));
   accept_callback(condition ? callback : (Callback *)nullptr);
   (void)initial;
@@ -102,5 +102,5 @@ void unchanged_types(int condition, int *p, _Optional int *optional) {
 
 // A nullptr_t-valued conditional still requires just one null conversion.
 int *null_result(int condition) {
-  return condition ? nullptr : nullptr; // warn-warning {{null pointer constant converted to a pointer type without '_Optional'}}
+  return condition ? nullptr : nullptr; // warn-warning {{null pointer constant converted to a pointer whose referenced type is not '_Optional'-qualified}}
 }
