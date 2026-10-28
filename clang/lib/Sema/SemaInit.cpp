@@ -632,8 +632,7 @@ static std::string getInitializedSubobjectName(const InitializedEntity &Entity) 
 void Sema::DiagnoseImplicitNullInitialization(const InitializedEntity &Entity,
                                             SourceLocation Loc) {
   QualType Type = Entity.getType().getAtomicUnqualifiedType();
-  if (getLangOpts().CPlusPlus ||
-      Diags.isIgnored(diag::warn_implicit_null_to_nonoptional, Loc))
+  if (Diags.isIgnored(diag::warn_implicit_null_to_nonoptional, Loc))
     return;
   if (const auto *PT = Type->getAs<PointerType>()) {
     if (PT->getPointeeType().isOptionalQualified())
@@ -8554,8 +8553,10 @@ ExprResult InitializationSequence::Perform(Sema &S,
     }
 
     case SK_ZeroInitialization: {
-      diagnoseImplicitNullInitialization(S, Entity, Kind.getLocation());
-
+      // Default initialization does not supply an initializer. In particular,
+      // implicit static zero-initialization is outside this warning's scope.
+      if (Kind.getKind() != InitializationKind::IK_Default)
+        diagnoseImplicitNullInitialization(S, Entity, Kind.getLocation());
 
       step_iterator NextStep = Step;
       ++NextStep;

@@ -259,6 +259,13 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- ``-Wnull-to-nonoptional`` checks omitted non-optional pointer subobjects
+  only when an initializer is supplied. This includes empty and partial
+  aggregate initializers and compound literals, including at file scope.
+  Declarations without initializers are exempt, even with static or thread
+  storage duration. The warning does not establish that a later library
+  initialization function is called before use.
+
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
   internal linkage (``static`` storage class) that are assigned but never used.
   This new coverage is added under the subgroup ``-Wunused-but-set-global``,
@@ -636,3 +643,4 @@ tree.
 If you have any questions or comments about Clang, please feel free to
 contact us on the `Discourse forums (Clang Frontend category)
 <https://discourse.llvm.org/c/clang/6>`_.
+

@@ -7,28 +7,30 @@ int value;
 void callback(void);
 typedef void Callback(void);
 typedef int *Pointer;
-struct Required { int n; int *p; }; // warn-note 9 {{'p' declared here}}
+struct Required { int n; int *p; }; // warn-note 7 {{'p' declared here}}
 struct Optional { int n; _Optional int *p; };
-struct Nested { struct Required s; int *a[3]; }; // warn-note 4 {{'a' declared here}}
+struct Nested { struct Required s; int *a[3]; }; // warn-note 3 {{'a' declared here}}
 union Choice { int *p; int n; };
 struct WithUnion { union Choice u; int n; };
 struct Flexible { int n; int *a[]; };
 struct AnonymousUnion { union { int *p; int n; }; int other; };
 
+// Declarations without initializers do not request diagnostic checking,
+// including tentative definitions, static locals and thread-local objects.
 int *global;
-int *global; // warn-warning {{implicitly initialized to null}}
-static int *internal; // warn-warning {{implicitly initialized to null}}
-thread_local int *thread; // warn-warning {{implicitly initialized to null}}
-void (*function)(void); // warn-warning {{implicitly initialized to null}}
+int *global;
+static int *internal;
+thread_local int *thread;
+void (*function)(void);
 _Optional int *optional;
 _Optional Callback *optional_function;
-_Atomic(int *) atomic_pointer; // warn-warning {{implicitly initialized to null}}
-int **outer; // warn-warning {{implicitly initialized to null}}
-_Optional int **inner; // warn-warning {{implicitly initialized to null}}
+_Atomic(int *) atomic_pointer;
+int **outer;
+_Optional int **inner;
 int * _Optional *optional_outer;
-int *array[1000000]; // warn-warning {{implicitly initialized to null}}
-struct Required record; // warn-warning {{implicitly initialized to null}}
-struct Nested nested; // warn-warning 2 {{implicitly initialized to null}}
+int *array[1000000];
+struct Required record;
+struct Nested nested;
 struct Optional optional_record;
 union Choice choice;
 struct WithUnion with_union;
@@ -60,7 +62,7 @@ struct Flexible empty_flexible = {};
 void local(int n) {
   int *uninitialised;
   struct Required uninitialised_record;
-  static int *local_static; // warn-warning {{implicitly initialized to null}}
+  static int *local_static;
   static int *initialised_static = &value;
   int *local_array[3] = {&value}; // warn-warning {{implicitly initialized to null}}
   struct Nested local_nested = {}; // warn-warning 2 {{implicitly initialized to null}}
@@ -76,3 +78,4 @@ void local(int n) {
 int *explicit_null = nullptr; // warn-warning {{null pointer constant converted}}
 int *explicit_array[1] = {0}; // warn-warning {{null pointer constant converted}}
 union Choice explicit_union = {.p = nullptr}; // warn-warning {{null pointer constant converted}}
+
