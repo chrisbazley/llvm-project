@@ -10,10 +10,10 @@ typedef int *Pointer;
 struct Required { int n; int *p; }; // warn-note 7 {{'p' declared here}}
 struct Optional { int n; _Optional int *p; };
 struct Nested { struct Required s; int *a[3]; }; // warn-note 3 {{'a' declared here}}
-union Choice { int *p; int n; };
+union Choice { int *p; int n; }; // warn-note 3 {{'p' declared here}}
 struct WithUnion { union Choice u; int n; };
 struct Flexible { int n; int *a[]; };
-struct AnonymousUnion { union { int *p; int n; }; int other; };
+struct AnonymousUnion { union { int *p; int n; }; int other; }; // warn-note {{'p' declared here}}
 
 // Declarations without initializers do not request diagnostic checking,
 // including tentative definitions, static locals and thread-local objects.
@@ -53,10 +53,10 @@ struct Required complete_record = {.p = &value};
 struct Nested empty_nested = {}; // warn-warning 2 {{implicitly initialized to null}}
 struct Nested designated_nested = {.s.p = &value}; // warn-warning {{implicitly initialized to null}}
 struct Required records[2] = {{.p = &value}}; // warn-warning {{implicitly initialized to null}}
-union Choice empty_union = {};
+union Choice empty_union = {}; // warn-warning {{implicitly initialized to null}}
 union Choice scalar_union = {.n = 1};
-struct WithUnion empty_with_union = {};
-struct AnonymousUnion empty_anonymous_union = {};
+struct WithUnion empty_with_union = {}; // warn-warning {{implicitly initialized to null}}
+struct AnonymousUnion empty_anonymous_union = {}; // warn-warning {{implicitly initialized to null}}
 struct Flexible empty_flexible = {};
 
 void local(int n) {
@@ -67,7 +67,7 @@ void local(int n) {
   int *local_array[3] = {&value}; // warn-warning {{implicitly initialized to null}}
   struct Nested local_nested = {}; // warn-warning 2 {{implicitly initialized to null}}
   struct Optional local_optional = {};
-  union Choice local_union = {};
+  union Choice local_union = {}; // warn-warning {{implicitly initialized to null}}
   (void)(struct Required){}; // warn-warning {{implicitly initialized to null}}
   (void)(int *[2]){}; // warn-warning {{implicitly initialized to null}}
   int *vla[n] = {}; // warn-warning {{implicitly initialized to null}}

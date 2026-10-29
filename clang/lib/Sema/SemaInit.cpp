@@ -655,25 +655,22 @@ void Sema::DiagnoseImplicitNullInitialization(const InitializedEntity &Entity,
     auto Element = InitializedEntity::InitializeElement(Context, 0, Entity);
     DiagnoseImplicitNullInitialization(Element, Loc);
   } else if (const auto *RT = Type->getAs<RecordType>()) {
-    if (RT->getDecl()->isUnion())
+    // A default member initializer selects and initializes the active union
+    // member. Its initialization is checked separately.
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+        RD && RD->isUnion() && RD->hasInClassInitializer())
       return;
     for (FieldDecl *Field : RT->getDecl()->fields()) {
-      if (Field->isUnnamedBitField() ||
-          Field->getType()->isIncompleteArrayType())
+      if (Field->isUnnamedBitField())
         continue;
       auto Member = InitializedEntity::InitializeMember(Field, &Entity);
       DiagnoseImplicitNullInitialization(Member, Loc);
+      // With no explicit selection, only the first eligible union member is
+      // initialized. The other members are inactive.
+      if (RT->getDecl()->isUnion())
+        break;
     }
   }
-}
-
-static void diagnoseImplicitNullInitialization(
-    Sema &S, const InitializedEntity &Entity, SourceLocation Loc) {
-  for (const InitializedEntity *Parent = &Entity; Parent;
-       Parent = Parent->getParent())
-    if (Parent->getType()->isUnionType())
-      return;
-  S.DiagnoseImplicitNullInitialization(Entity, Loc);
 }
 
 ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
@@ -1816,8 +1813,7 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
                                       unsigned &StructuredIndex) {
   if (Index >= IList->getNumInits()) {
     if (!VerifyOnly) {
-      diagnoseImplicitNullInitialization(SemaRef, Entity,
-                                         IList->getBeginLoc());
+      SemaRef.DiagnoseImplicitNullInitialization(Entity, IList->getBeginLoc());
       if (SemaRef.getLangOpts().CPlusPlus) {
         if (DeclType->isSizelessBuiltinType())
           SemaRef.Diag(IList->getBeginLoc(),
@@ -2269,8 +2265,7 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
             << VAT->getSizeExpr()->getSourceRange();
     }
     if (!VerifyOnly && !HasErr)
-      diagnoseImplicitNullInitialization(SemaRef, Entity,
-                                         IList->getBeginLoc());
+      SemaRef.DiagnoseImplicitNullInitialization(Entity, IList->getBeginLoc());
     hadError = HasErr;
     ++Index;
     ++StructuredIndex;
@@ -8556,7 +8551,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       // Default initialization does not supply an initializer. In particular,
       // implicit static zero-initialization is outside this warning's scope.
       if (Kind.getKind() != InitializationKind::IK_Default)
-        diagnoseImplicitNullInitialization(S, Entity, Kind.getLocation());
+        S.DiagnoseImplicitNullInitialization(Entity, Kind.getLocation());
 
       step_iterator NextStep = Step;
       ++NextStep;

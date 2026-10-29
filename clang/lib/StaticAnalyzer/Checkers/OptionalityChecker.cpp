@@ -213,7 +213,9 @@ void OptionalityChecker::verifyCall(CheckerContext &C,
   if (!DefOrUnknown)
     return;
 
-  if (State->isNonNull(*DefOrUnknown).isConstrainedTrue())
+  // isNonNull() cannot prove that a concrete function address is non-null.
+  // Ask whether a null call target is feasible, as for other dereferences.
+  if (!State->assume(*DefOrUnknown, false))
     return;
 
   ExplodedNode *N = C.generateNonFatalErrorNode(State);
