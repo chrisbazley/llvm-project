@@ -40,6 +40,76 @@ void anna_explicit_checked(_Optional typeof(void(void)) *function)
   if (function)
     (*function)();
 }
+
+// Known function addresses are non-null even without a preceding check.
+typedef void Callback(void);
+void external_callback(void);
+static void defined_callback(void) {}
+
+void known_callbacks(void)
+{
+  _Optional Callback *external = external_callback;
+  _Optional Callback *defined = defined_callback;
+  external();
+  defined();
+}
+
+void known_callbacks_checked(void)
+{
+  _Optional Callback *callback = external_callback;
+  if (callback)
+    callback();
+}
+
+// A weak function may be absent, so its address still needs a null check.
+void weak_callback(void) __attribute__((weak));
+
+void weak_callback_unchecked(void)
+{
+  _Optional Callback *callback = weak_callback;
+  callback();
+  // expected-warning@-1 {{Pointer to _Optional function is dereferenced without a preceding check for null}}
+}
+
+void weak_callback_checked(void)
+{
+  _Optional Callback *callback = weak_callback;
+  if (callback)
+    callback();
+}
+
+struct CallbackEntry {
+  _Optional Callback *show;
+};
+
+void const_callback_table(void)
+{
+  static const struct CallbackEntry switches[] = {
+    {external_callback}, {defined_callback}, {nullptr}
+  };
+  for (unsigned i = 0; i < sizeof(switches) / sizeof(switches[0]); ++i)
+    if (switches[i].show)
+      switches[i].show();
+}
+
+void const_callback_table_pointer(void)
+{
+  static const struct CallbackEntry switches[] = {
+    {external_callback}, {defined_callback}, {nullptr}
+  };
+  for (unsigned i = 0; i < sizeof(switches) / sizeof(switches[0]); ++i) {
+    const struct CallbackEntry *entry = &switches[i];
+    if (entry->show)
+      entry->show();
+  }
+}
+
+void unchecked_callback_member(const struct CallbackEntry *entry)
+{
+  entry->show();
+  // expected-warning@-1 {{Pointer to _Optional function is dereferenced without a preceding check for null}}
+}
+
 //----
 int *barton(_Optional typeof(int (void)) *pof)
 {
