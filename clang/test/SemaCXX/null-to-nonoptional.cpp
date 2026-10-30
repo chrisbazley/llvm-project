@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -Wnull-to-nonoptional -verify=warn %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -Wno-null-to-nonoptional -verify=none %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -Wimplicit-null-initialization -verify=warn %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -Wno-implicit-null-initialization -verify=none %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=none %s
 // none-no-diagnostics
 

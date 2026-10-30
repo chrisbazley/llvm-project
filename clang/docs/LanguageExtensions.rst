@@ -7268,3 +7268,30 @@ Clang fails to reject some code that should be rejected. e.g.,
   // own initializer rather than rejecting the code with an undeclared identifier
   // diagnostic.
   auto x = x;
+
+
+Null pointer diagnostics for ``_Optional``
+========================================
+
+Two independently controlled warnings diagnose null pointer values where the
+referenced type is not ``_Optional``-qualified. Both are disabled by default.
+
+``-Wnull-to-nonoptional`` diagnoses implicit conversions of explicitly supplied
+null pointer constants, including in initializers, assignments, arguments and
+return statements. Null arms of conditional expressions are checked against the
+destination type without changing expression types. Explicit pointer casts and
+null comparisons do not trigger this warning, except that a cast of an integer
+null pointer constant to a pointer to unqualified ``void`` remains a null pointer
+constant.
+
+``-Wimplicit-null-initialization`` diagnoses implicit null initialization of
+omitted members and array elements, and empty initializers, when an explicit
+initializer is supplied (including compound literals). Declarations without an
+initializer are exempt, including static-storage objects and tentative
+definitions. Only the selected union member is checked, or the first eligible
+member by default. Diagnostics identify subobjects by member names and array
+indices, with one representative omitted array element.
+
+These warnings apply to both object and function pointers. Implicit null
+initialization is diagnosed in both C and C++. Each warning can be enabled or disabled separately on the command line or using
+``#pragma clang diagnostic``. They are also available with ``-fsyntax-only``.

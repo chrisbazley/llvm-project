@@ -1933,3 +1933,4 @@ def ExperimentalOption : DiagGroup<"experimental-option">;
 def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
 
 def NullToNonoptional : DiagGroup<"null-to-nonoptional">;
+def ImplicitNullInitialization : DiagGroup<"implicit-null-initialization">;

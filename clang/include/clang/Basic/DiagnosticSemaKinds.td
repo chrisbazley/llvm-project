@@ -6698,14 +6698,14 @@ def err_typecheck_invalid_optional_param : Error<
   "function parameter cannot have '_Optional' qualified type %0">;
 def err_typecheck_invalid_optional_member : Error<
   "member cannot have '_Optional' qualified type %0">;
-def warn_null_to_nonoptional : Warning<
+def warn_null_pointer_conversion : Warning<
   "null pointer constant converted to a pointer whose referenced type is not "
   "'_Optional'-qualified">,
   InGroup<NullToNonoptional>, DefaultIgnore;
-def warn_implicit_null_to_nonoptional : Warning<
+def warn_implicit_null_initialization : Warning<
   "pointer '%0' implicitly initialized to null; referenced type is not "
   "'_Optional'-qualified">,
-  InGroup<NullToNonoptional>, DefaultIgnore;
+  InGroup<ImplicitNullInitialization>, DefaultIgnore;
 def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<

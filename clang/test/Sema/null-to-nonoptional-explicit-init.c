@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c2y -fsyntax-only -Wnull-to-nonoptional -verify=warn %s
-// RUN: %clang_cc1 -std=c2y -fsyntax-only -Wno-null-to-nonoptional -verify=none %s
+// RUN: %clang_cc1 -std=c2y -fsyntax-only -Wimplicit-null-initialization -verify=warn %s
+// RUN: %clang_cc1 -std=c2y -fsyntax-only -Wno-implicit-null-initialization -verify=none %s
 // RUN: %clang_cc1 -std=c2y -fsyntax-only -verify=none %s
 // none-no-diagnostics
 
