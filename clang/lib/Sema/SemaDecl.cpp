@@ -14730,6 +14730,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       return;
     }
 
+    // Mutable static objects may be initialized later; const pointer
+    // subobjects cannot. Tentative definitions are handled at end of TU.
+    if (!getLangOpts().CPlusPlus && Var->hasGlobalStorage())
+      DiagnoseImplicitNullInitialization(
+          InitializedEntity::InitializeVariable(Var), Var->getLocation(), true);
+
     // In C, if the definition is const-qualified and has no initializer, it
     // is left uninitialized unless it has static or thread storage duration.
     if (!getLangOpts().CPlusPlus && Type.isConstQualified()) {

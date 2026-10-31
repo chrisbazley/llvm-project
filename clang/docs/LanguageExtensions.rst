@@ -7288,8 +7288,12 @@ constant.
 omitted members and array elements, and empty initializers, when an explicit
 initializer is supplied (including compound literals). Declarations without an
 initializer are exempt, including static-storage objects and tentative
-definitions. Only the selected union member is checked, or the first eligible
-member by default. Diagnostics identify subobjects by member names and array
+definitions, except that const pointer subobjects with static or thread storage
+duration are diagnosed even without an initializer: they cannot be assigned
+non-null values later. Const qualification of the pointee alone does not
+trigger this exception. Tentative definitions are checked only after the final
+definition is known. Only the selected union member is checked, or the first
+eligible member by default. Diagnostics identify subobjects by member names and array
 indices, with one representative omitted array element.
 
 These warnings apply to both object and function pointers. Implicit null

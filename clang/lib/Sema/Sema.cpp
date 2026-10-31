@@ -1507,6 +1507,13 @@ void Sema::ActOnEndOfTranslationUnit() {
       Diag(VD->getLocation(), DiagID) << Type << EmitCppCompat;
     }
 
+    // A const pointer cannot be filled in by a later initialization function.
+    // Wait for the final definition, since a tentative definition can acquire
+    // an explicit initializer later in the translation unit.
+    if (!VD->isInvalidDecl() && !VD->getAnyInitializer())
+      DiagnoseImplicitNullInitialization(
+          InitializedEntity::InitializeVariable(VD), VD->getLocation(), true);
+
     // Notify the consumer that we've completed a tentative definition.
     if (!VD->isInvalidDecl())
       Consumer.CompleteTentativeDefinition(VD);
