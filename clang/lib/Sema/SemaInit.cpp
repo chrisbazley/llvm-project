@@ -632,12 +632,12 @@ static std::string getInitializedSubobjectName(const InitializedEntity &Entity) 
 void Sema::DiagnoseImplicitNullInitialization(const InitializedEntity &Entity,
                                             SourceLocation Loc) {
   QualType Type = Entity.getType().getAtomicUnqualifiedType();
-  if (Diags.isIgnored(diag::warn_implicit_null_to_nonoptional, Loc))
+  if (Diags.isIgnored(diag::warn_implicit_null_initialization, Loc))
     return;
   if (const auto *PT = Type->getAs<PointerType>()) {
     if (PT->getPointeeType().isOptionalQualified())
       return;
-    Diag(Loc, diag::warn_implicit_null_to_nonoptional)
+    Diag(Loc, diag::warn_implicit_null_initialization)
         << getInitializedSubobjectName(Entity);
     for (const InitializedEntity *Parent = &Entity; Parent;
          Parent = Parent->getParent()) {

@@ -10133,7 +10133,7 @@ static void diagnoseNullToNonoptional(Sema &S, const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if ((S.getLangOpts().C23 && E->getType()->isNullPtrType()) ||
       E->isNullPointerConstant(S.Context, Expr::NPC_ValueDependentIsNull)) {
-    S.Diag(E->getExprLoc(), diag::warn_null_to_nonoptional);
+    S.Diag(E->getExprLoc(), diag::warn_null_pointer_conversion);
     return;
   }
   if (!E->getType()->isPointerType())
@@ -10252,7 +10252,8 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
   QualType LHSTypeAfterConversion = LHSType.getAtomicUnqualifiedType();
 
   if (Diagnose &&
-      !Diags.isIgnored(diag::warn_null_to_nonoptional, RHS.get()->getExprLoc())) {
+      !Diags.isIgnored(diag::warn_null_pointer_conversion,
+                       RHS.get()->getExprLoc())) {
     if (const auto *PT = LHSTypeAfterConversion->getAs<PointerType>();
         PT && !PT->getPointeeType().isOptionalQualified())
       diagnoseNullToNonoptional(*this, RHS.get());
