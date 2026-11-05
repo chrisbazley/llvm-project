@@ -12906,6 +12906,9 @@ public:
                  bool DependentDeduction = false,
                  bool IgnoreConstraints = false,
                  TemplateSpecCandidateSet *FailedTSC = nullptr);
+  /// Diagnose explicit null values converted to a non-optional pointer.
+  void DiagnoseNullToNonoptional(QualType ToType, const Expr *E);
+
   void DiagnoseImplicitNullInitialization(const InitializedEntity &Entity,
                                           SourceLocation Loc);
 

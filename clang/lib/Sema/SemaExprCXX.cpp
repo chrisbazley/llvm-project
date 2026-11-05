@@ -4657,6 +4657,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       }
       // Watch out for ellipsis conversion.
       if (!ICS.UserDefined.EllipsisConversion) {
+        // A converting constructor's initial standard conversion initializes
+        // its parameter, even though the complete sequence produces a class.
+        if (isa<CXXConstructorDecl>(FD) &&
+            CCK == CheckedConversionKind::Implicit)
+          DiagnoseNullToNonoptional(BeforeToType, From);
         ExprResult Res = PerformImplicitConversion(
             From, BeforeToType, ICS.UserDefined.Before,
             AssignmentAction::Converting, CCK);
@@ -4769,6 +4774,14 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 CheckedConversionKind CCK) {
   bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
                  CCK == CheckedConversionKind::FunctionalCast);
+
+  // Diagnose only conversions to the destination of an initialization or
+  // assignment. Intermediate conversions (for example, the null arm of a
+  // conditional expression) do not yet know that destination's optionality.
+  if (getLangOpts().CPlusPlus && CCK == CheckedConversionKind::Implicit &&
+      Action != AssignmentAction::Converting &&
+      Action != AssignmentAction::Casting)
+    DiagnoseNullToNonoptional(ToType, From);
 
   // Overall FIXME: we are recomputing too many types here and doing far too
   // much extra work. What this means is that we need to keep track of more

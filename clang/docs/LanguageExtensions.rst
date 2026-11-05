@@ -7292,6 +7292,6 @@ definitions. Only the selected union member is checked, or the first eligible
 member by default. Diagnostics identify subobjects by member names and array
 indices, with one representative omitted array element.
 
-These warnings apply to both object and function pointers. Implicit null
-initialization is diagnosed in both C and C++. Each warning can be enabled or disabled separately on the command line or using
+These warnings apply to both object and function pointers in C and C++.
+Each warning can be enabled or disabled separately on the command line or using
 ``#pragma clang diagnostic``. They are also available with ``-fsyntax-only``.
