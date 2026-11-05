@@ -12910,7 +12910,8 @@ public:
   void DiagnoseNullToNonoptional(QualType ToType, const Expr *E);
 
   void DiagnoseImplicitNullInitialization(const InitializedEntity &Entity,
-                                          SourceLocation Loc);
+                                          SourceLocation Loc,
+                                          bool ConstPointersOnly = false);
 
   void DiagnoseAutoDeductionFailure(const VarDecl *VDecl, const Expr *Init);
   bool DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,

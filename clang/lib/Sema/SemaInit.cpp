@@ -630,13 +630,22 @@ static std::string getInitializedSubobjectName(const InitializedEntity &Entity) 
 // Diagnose one representative element for an implicitly initialized array,
 // retaining its enclosing members and indices for the diagnostic.
 void Sema::DiagnoseImplicitNullInitialization(const InitializedEntity &Entity,
-                                            SourceLocation Loc) {
+                                            SourceLocation Loc,
+                                            bool ConstPointersOnly) {
   QualType Type = Entity.getType().getAtomicUnqualifiedType();
   if (Diags.isIgnored(diag::warn_implicit_null_initialization, Loc))
     return;
   if (const auto *PT = Type->getAs<PointerType>()) {
     if (PT->getPointeeType().isOptionalQualified())
       return;
+    if (ConstPointersOnly) {
+      bool IsConst = false;
+      for (const InitializedEntity *Parent = &Entity; Parent;
+           Parent = Parent->getParent())
+        IsConst |= Parent->getType().isConstQualified();
+      if (!IsConst)
+        return;
+    }
     Diag(Loc, diag::warn_implicit_null_initialization)
         << getInitializedSubobjectName(Entity);
     for (const InitializedEntity *Parent = &Entity; Parent;
@@ -653,7 +662,7 @@ void Sema::DiagnoseImplicitNullInitialization(const InitializedEntity &Entity,
         CAT && CAT->getZExtSize() == 0)
       return;
     auto Element = InitializedEntity::InitializeElement(Context, 0, Entity);
-    DiagnoseImplicitNullInitialization(Element, Loc);
+    DiagnoseImplicitNullInitialization(Element, Loc, ConstPointersOnly);
   } else if (const auto *RT = Type->getAs<RecordType>()) {
     // A default member initializer selects and initializes the active union
     // member. Its initialization is checked separately.
@@ -664,7 +673,7 @@ void Sema::DiagnoseImplicitNullInitialization(const InitializedEntity &Entity,
       if (Field->isUnnamedBitField())
         continue;
       auto Member = InitializedEntity::InitializeMember(Field, &Entity);
-      DiagnoseImplicitNullInitialization(Member, Loc);
+      DiagnoseImplicitNullInitialization(Member, Loc, ConstPointersOnly);
       // With no explicit selection, only the first eligible union member is
       // initialized. The other members are inactive.
       if (RT->getDecl()->isUnion())
