@@ -10149,6 +10149,14 @@ static void diagnoseNullToNonoptional(Sema &S, const Expr *E) {
     diagnoseNullToNonoptional(S, Binary->getRHS());
 }
 
+void Sema::DiagnoseNullToNonoptional(QualType ToType, const Expr *E) {
+  if (Diags.isIgnored(diag::warn_null_pointer_conversion, E->getExprLoc()))
+    return;
+  if (const auto *PT = ToType.getAtomicUnqualifiedType()->getAs<PointerType>();
+      PT && !PT->getPointeeType().isOptionalQualified())
+    diagnoseNullToNonoptional(*this, E);
+}
+
 AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
                                                          ExprResult &CallerRHS,
                                                          bool Diagnose,
@@ -10251,13 +10259,8 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
   // unqualified type of the LHS.
   QualType LHSTypeAfterConversion = LHSType.getAtomicUnqualifiedType();
 
-  if (Diagnose &&
-      !Diags.isIgnored(diag::warn_null_pointer_conversion,
-                       RHS.get()->getExprLoc())) {
-    if (const auto *PT = LHSTypeAfterConversion->getAs<PointerType>();
-        PT && !PT->getPointeeType().isOptionalQualified())
-      diagnoseNullToNonoptional(*this, RHS.get());
-  }
+  if (Diagnose)
+    DiagnoseNullToNonoptional(LHSTypeAfterConversion, RHS.get());
 
   // C99 6.5.16.1p1: the left operand is a pointer and the right is
   // a null pointer constant <C23>or its type is nullptr_t;</C23>.
